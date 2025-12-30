@@ -1,24 +1,46 @@
 {
-  "name": "thinkprompt-mcp",
-  "version": "1.0.0",
-  "description": "MCP Server for ThinkPrompt - Prompt Management System",
+  "name": "@honeyfield/thinkprompt-mcp",
+  "version": "1.1.0",
+  "description": "MCP Server for ThinkPrompt - Prompt Management System with Multi-Workspace Support",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "thinkprompt-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "lint": "eslint src/**/*.ts",
-    "inspect": "npx @anthropic-ai/mcp-inspector dist/index.js"
+    "inspect": "npx @anthropic-ai/mcp-inspector dist/index.js",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
     "claude",
     "ai",
-    "prompts"
+    "prompts",
+    "prompt-management",
+    "model-context-protocol",
+    "anthropic"
   ],
   "author": "Honeyfield",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://bitbucket.org/vernes_p/thinkprompt-mcp.git"
+  },
+  "homepage": "https://bitbucket.org/vernes_p/thinkprompt-mcp#readme",
+  "bugs": {
+    "url": "https://bitbucket.org/vernes_p/thinkprompt-mcp/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
