@@ -477,7 +477,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'update_feature_status',
       description:
-        'Quick update of feature status. When setting to ready_for_review, validates that all tasks are done. Use force=true to skip validation.',
+        'Quick update of feature status. When setting to ready_for_review or done, validates that all tasks are completed. Use force=true to skip validation.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -490,7 +490,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           force: {
             type: 'boolean',
             description:
-              'Force status update even if validation fails (e.g., open tasks exist for ready_for_review)',
+              'Force status update even if validation fails (e.g., open tasks exist for ready_for_review or done)',
           },
         },
         required: ['id', 'status'],
@@ -1585,6 +1585,168 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             description: 'Items per page (default: 20)',
           },
         },
+      },
+    },
+
+    // ============ Plugin Marketplace Tools ============
+    {
+      name: 'search_marketplace_plugins',
+      description: 'Search for Claude Code plugins in the ThinkPrompt marketplace. Returns published plugins with install commands.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          search: {
+            type: 'string',
+            description: 'Search query to filter plugins by name, description, or keywords',
+          },
+          category: {
+            type: 'string',
+            description: 'Category slug to filter by (e.g., "development", "testing", "productivity")',
+          },
+          installSource: {
+            type: 'string',
+            enum: ['npm', 'github', 'url'],
+            description: 'Filter by installation source',
+          },
+          sortBy: {
+            type: 'string',
+            enum: ['installs', 'rating', 'recent', 'name'],
+            description: 'Sort order (default: installs)',
+          },
+          sortOrder: {
+            type: 'string',
+            enum: ['asc', 'desc'],
+            description: 'Sort direction (default: desc)',
+          },
+          page: {
+            type: 'number',
+            description: 'Page number (default: 1)',
+          },
+          limit: {
+            type: 'number',
+            description: 'Items per page (default: 20)',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_marketplace_plugin',
+      description: 'Get detailed information about a plugin including install command and version history.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          nameOrId: {
+            type: 'string',
+            description: 'Plugin name (e.g., "my-plugin") or UUID',
+          },
+        },
+        required: ['nameOrId'],
+      },
+    },
+    {
+      name: 'get_plugin_categories',
+      description: 'List all available plugin categories in the marketplace.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    {
+      name: 'get_featured_plugins',
+      description: 'Get featured/highlighted plugins from the marketplace.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    {
+      name: 'register_marketplace_plugin',
+      description: 'Register a new plugin in the ThinkPrompt marketplace. The plugin will be in draft status until published.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Unique plugin name (lowercase-with-hyphens, e.g., "my-awesome-plugin")',
+          },
+          displayName: {
+            type: 'string',
+            description: 'Human-readable display name',
+          },
+          description: {
+            type: 'string',
+            description: 'Short description of the plugin',
+          },
+          longDescription: {
+            type: 'string',
+            description: 'Detailed description/README in markdown',
+          },
+          installSource: {
+            type: 'string',
+            enum: ['npm', 'github', 'url'],
+            description: 'Where the plugin can be installed from',
+          },
+          npmPackage: {
+            type: 'string',
+            description: 'npm package name (required if installSource is "npm")',
+          },
+          githubRepo: {
+            type: 'string',
+            description: 'GitHub repo in "owner/repo" format (required if installSource is "github")',
+          },
+          installUrl: {
+            type: 'string',
+            description: 'Direct URL for installation (required if installSource is "url")',
+          },
+          categoryId: {
+            type: 'string',
+            description: 'Category UUID',
+          },
+          homepageUrl: {
+            type: 'string',
+            description: 'Plugin homepage URL',
+          },
+          repositoryUrl: {
+            type: 'string',
+            description: 'Source code repository URL',
+          },
+          documentationUrl: {
+            type: 'string',
+            description: 'Documentation URL',
+          },
+          license: {
+            type: 'string',
+            description: 'License identifier (e.g., "MIT", "Apache-2.0")',
+          },
+          keywords: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Keywords for search',
+          },
+        },
+        required: ['name', 'displayName', 'installSource'],
+      },
+    },
+    {
+      name: 'track_plugin_install',
+      description: 'Track that a plugin was installed. Used for statistics and popularity tracking.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          nameOrId: {
+            type: 'string',
+            description: 'Plugin name or UUID',
+          },
+          version: {
+            type: 'string',
+            description: 'Version that was installed',
+          },
+          source: {
+            type: 'string',
+            description: 'Installation source (e.g., "cli", "manual")',
+          },
+        },
+        required: ['nameOrId'],
       },
     },
   ],
@@ -2731,6 +2893,81 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           limit?: number;
         };
         const result = await apiClient.listQualityIssues(params);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      // ============ Plugin Marketplace Handlers ============
+
+      case 'search_marketplace_plugins': {
+        const params = args as {
+          search?: string;
+          category?: string;
+          installSource?: 'npm' | 'github' | 'url';
+          sortBy?: 'installs' | 'rating' | 'recent' | 'name';
+          sortOrder?: 'asc' | 'desc';
+          page?: number;
+          limit?: number;
+        };
+        const result = await apiClient.searchMarketplacePlugins(params);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_marketplace_plugin': {
+        const { nameOrId } = args as { nameOrId: string };
+        const result = await apiClient.getMarketplacePlugin(nameOrId);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_plugin_categories': {
+        const result = await apiClient.getPluginCategories();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_featured_plugins': {
+        const result = await apiClient.getFeaturedPlugins();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'register_marketplace_plugin': {
+        const input = args as {
+          name: string;
+          displayName: string;
+          description?: string;
+          longDescription?: string;
+          installSource: 'npm' | 'github' | 'url';
+          npmPackage?: string;
+          githubRepo?: string;
+          installUrl?: string;
+          categoryId?: string;
+          homepageUrl?: string;
+          repositoryUrl?: string;
+          documentationUrl?: string;
+          license?: string;
+          keywords?: string[];
+        };
+        const result = await apiClient.registerMarketplacePlugin(input);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'track_plugin_install': {
+        const { nameOrId, version, source } = args as {
+          nameOrId: string;
+          version?: string;
+          source?: string;
+        };
+        const result = await apiClient.trackPluginInstall(nameOrId, { version, source });
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };

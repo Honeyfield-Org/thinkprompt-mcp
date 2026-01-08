@@ -1031,6 +1031,103 @@ export interface QualityAnalyticsQueryParams {
   metricType?: string;
 }
 
+// ============ Plugin Marketplace Types ============
+
+export type PluginStatus = 'draft' | 'published' | 'deprecated';
+export type PluginInstallSource = 'npm' | 'github' | 'url';
+
+export interface PluginCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  sortOrder: number;
+}
+
+export interface Plugin {
+  id: string;
+  name: string;
+  displayName: string;
+  slug: string;
+  description: string | null;
+  longDescription: string | null;
+  installSource: PluginInstallSource;
+  npmPackage: string | null;
+  githubRepo: string | null;
+  installUrl: string | null;
+  categoryId: string | null;
+  category: PluginCategory | null;
+  homepageUrl: string | null;
+  repositoryUrl: string | null;
+  documentationUrl: string | null;
+  license: string | null;
+  keywords: string[];
+  status: PluginStatus;
+  latestVersion: string | null;
+  totalInstalls: number;
+  weeklyInstalls: number;
+  ratingAverage: number;
+  ratingCount: number;
+  authorId: string | null;
+  authorName: string | null;
+  isVerified: boolean;
+  isFeatured: boolean;
+  installCommand: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+}
+
+export interface PluginVersion {
+  id: string;
+  pluginId: string;
+  version: string;
+  changelog: string | null;
+  minClaudeVersion: string | null;
+  isLatest: boolean;
+  isYanked: boolean;
+  installCount: number;
+  createdAt: string;
+}
+
+export interface PluginDetail extends Plugin {
+  versions: PluginVersion[];
+}
+
+export interface PluginSearchParams {
+  search?: string;
+  category?: string;
+  installSource?: PluginInstallSource;
+  sortBy?: 'installs' | 'rating' | 'recent' | 'name';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+export interface RegisterPluginInput {
+  name: string;
+  displayName: string;
+  description?: string;
+  longDescription?: string;
+  installSource: PluginInstallSource;
+  npmPackage?: string;
+  githubRepo?: string;
+  installUrl?: string;
+  categoryId?: string;
+  homepageUrl?: string;
+  repositoryUrl?: string;
+  documentationUrl?: string;
+  license?: string;
+  keywords?: string[];
+}
+
+export interface TrackPluginInstallInput {
+  version?: string;
+  source?: string;
+}
+
 export class ThinkPromptApiClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
@@ -1768,5 +1865,46 @@ export class ThinkPromptApiClient {
     if (params?.metricType) searchParams.set('metricType', params.metricType);
     const query = searchParams.toString();
     return this.request<QualityTrends>(`/projects/${projectId}/quality-analytics/trends${query ? `?${query}` : ''}`);
+  }
+
+  // ============ Plugin Marketplace Methods ============
+
+  async searchMarketplacePlugins(params?: PluginSearchParams): Promise<PaginatedResponse<Plugin>> {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.category) searchParams.set('category', params.category);
+    if (params?.installSource) searchParams.set('installSource', params.installSource);
+    if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
+    if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return this.request<PaginatedResponse<Plugin>>(`/plugins${query ? `?${query}` : ''}`);
+  }
+
+  async getMarketplacePlugin(nameOrId: string): Promise<PluginDetail> {
+    return this.request<PluginDetail>(`/plugins/${encodeURIComponent(nameOrId)}`);
+  }
+
+  async getPluginCategories(): Promise<PluginCategory[]> {
+    return this.request<PluginCategory[]>('/plugins/categories');
+  }
+
+  async getFeaturedPlugins(): Promise<Plugin[]> {
+    return this.request<Plugin[]>('/plugins/featured');
+  }
+
+  async registerMarketplacePlugin(input: RegisterPluginInput): Promise<Plugin> {
+    return this.request<Plugin>('/plugins', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async trackPluginInstall(nameOrId: string, input?: TrackPluginInstallInput): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/plugins/${encodeURIComponent(nameOrId)}/install`, {
+      method: 'POST',
+      body: JSON.stringify(input ?? {}),
+    });
   }
 }
