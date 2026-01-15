@@ -46,6 +46,36 @@ Add the following to your `claude_desktop_config.json`:
 }
 ```
 
+## Using ThinkPrompt MCP with Claude Desktop
+
+### Getting Started
+
+1. **Get your API Key**: Log into ThinkPrompt and navigate to `/api-keys` to create a new API key
+2. **Configure Claude Desktop**: Add the configuration above to your `claude_desktop_config.json` file, replacing `tp_your-api-key-here` with your actual API key
+3. **Restart Claude Desktop**: Close and reopen Claude Desktop to load the MCP server
+4. **Verify Connection**: In Claude Desktop, you should see the ThinkPrompt tools available. Try asking Claude: "List my workspaces" or "Show me all projects"
+
+### How It Works
+
+Once configured, Claude Desktop will automatically connect to the ThinkPrompt MCP server. You can then interact with ThinkPrompt directly through natural language:
+
+- Ask Claude to list, create, or manage prompts
+- Request project and task information
+- Generate tasks from features using AI
+- Track code quality and test sessions
+- Browse the plugin marketplace
+
+The MCP server acts as a bridge between Claude and the ThinkPrompt API, translating your requests into API calls and returning the results in a conversational format.
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Tools not appearing | Restart Claude Desktop after saving config |
+| Authentication errors | Verify your API key is correct and active |
+| Connection timeout | Check that the API URL is accessible |
+| "npx not found" | Ensure Node.js (v18+) is installed and in PATH |
+
 ## Available Tools
 
 ### Prompt Management
