@@ -356,6 +356,62 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ['workspaceId'],
       },
     },
+    // Tag tools
+    {
+      name: 'list_tags',
+      description: 'List all tags in the current workspace. Tags can be used to categorize features, tasks, and documents.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    {
+      name: 'get_tag',
+      description: 'Get detailed information about a specific tag.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The UUID of the tag' },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'create_tag',
+      description: 'Create a new tag in the current workspace.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Tag name (max 100 characters)' },
+          color: { type: 'string', description: 'Hex color code (e.g., "#6366f1")' },
+        },
+        required: ['name'],
+      },
+    },
+    {
+      name: 'update_tag',
+      description: 'Update an existing tag.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The UUID of the tag to update' },
+          name: { type: 'string', description: 'New tag name' },
+          color: { type: 'string', description: 'New hex color code' },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'delete_tag',
+      description: 'Delete a tag. This will remove the tag from all features, tasks, and documents.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The UUID of the tag to delete' },
+        },
+        required: ['id'],
+      },
+    },
     // Project Management tools
     {
       name: 'list_projects',
@@ -425,6 +481,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           projectId: { type: 'string', description: 'The UUID of the project' },
           includeArchived: { type: 'boolean', description: 'Include archived features' },
+          compact: { type: 'boolean', description: 'Return compact response without descriptions (reduces payload size)' },
         },
         required: ['projectId'],
       },
@@ -541,6 +598,57 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'list_feature_comments',
       description: 'List all comments on a feature.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          featureId: { type: 'string', description: 'The UUID of the feature' },
+        },
+        required: ['featureId'],
+      },
+    },
+    {
+      name: 'delete_feature',
+      description: 'Delete a feature (soft delete - marks as archived).',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The UUID of the feature to delete' },
+        },
+        required: ['id'],
+      },
+    },
+    // Feature Tag tools
+    {
+      name: 'add_feature_tags',
+      description: 'Add tags to a feature. Maximum 10 tags per feature.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          featureId: { type: 'string', description: 'The UUID of the feature' },
+          tagIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Array of tag UUIDs to add (max 10 total)',
+          },
+        },
+        required: ['featureId', 'tagIds'],
+      },
+    },
+    {
+      name: 'remove_feature_tag',
+      description: 'Remove a tag from a feature.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          featureId: { type: 'string', description: 'The UUID of the feature' },
+          tagId: { type: 'string', description: 'The UUID of the tag to remove' },
+        },
+        required: ['featureId', 'tagId'],
+      },
+    },
+    {
+      name: 'get_feature_tags',
+      description: 'Get all tags for a feature.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -741,6 +849,57 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           id: { type: 'string', description: 'The UUID of the task' },
         },
         required: ['id'],
+      },
+    },
+    {
+      name: 'delete_task',
+      description: 'Delete a task (soft delete - marks as archived).',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The UUID of the task to delete' },
+        },
+        required: ['id'],
+      },
+    },
+    // Task Tag tools
+    {
+      name: 'add_task_tags',
+      description: 'Add tags to a task. Maximum 10 tags per task.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          taskId: { type: 'string', description: 'The UUID of the task' },
+          tagIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Array of tag UUIDs to add (max 10 total)',
+          },
+        },
+        required: ['taskId', 'tagIds'],
+      },
+    },
+    {
+      name: 'remove_task_tag',
+      description: 'Remove a tag from a task.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          taskId: { type: 'string', description: 'The UUID of the task' },
+          tagId: { type: 'string', description: 'The UUID of the tag to remove' },
+        },
+        required: ['taskId', 'tagId'],
+      },
+    },
+    {
+      name: 'get_task_tags',
+      description: 'Get all tags for a task.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          taskId: { type: 'string', description: 'The UUID of the task' },
+        },
+        required: ['taskId'],
       },
     },
     // Workflow tools
@@ -1749,6 +1908,388 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ['nameOrId'],
       },
     },
+
+    // ============ Document Storage Tools ============
+    {
+      name: 'list_documents',
+      description: 'List documents with optional filters. Documents can be workspace-level or project-level, organized in hierarchical folders.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: {
+            type: 'string',
+            description: 'Filter by project UUID (null for workspace-level documents)',
+          },
+          folderId: {
+            type: 'string',
+            description: 'Filter by folder UUID',
+          },
+          search: {
+            type: 'string',
+            description: 'Full-text search query on title and content',
+          },
+          tagIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Filter by tag UUIDs',
+          },
+          includeArchived: {
+            type: 'boolean',
+            description: 'Include archived documents (default: false)',
+          },
+          page: {
+            type: 'number',
+            description: 'Page number (default: 1)',
+          },
+          limit: {
+            type: 'number',
+            description: 'Items per page (default: 20, max: 100)',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_document',
+      description: 'Get a document by ID including its content, frontmatter, and metadata.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'The UUID of the document',
+          },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'create_document',
+      description: 'Create a new markdown document with optional YAML frontmatter.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description: 'Document title (max 500 characters)',
+          },
+          content: {
+            type: 'string',
+            description: 'Markdown content of the document',
+          },
+          frontmatter: {
+            type: 'object',
+            description: 'YAML frontmatter as a JSON object',
+            additionalProperties: true,
+          },
+          folderId: {
+            type: 'string',
+            description: 'Folder UUID to place the document in',
+          },
+          projectId: {
+            type: 'string',
+            description: 'Project UUID for project-level document (null for workspace-level)',
+          },
+          tagIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Tag UUIDs to assign (max 10)',
+          },
+        },
+        required: ['title'],
+      },
+    },
+    {
+      name: 'update_document',
+      description: 'Update a document. Creates a new version in the document history.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'The UUID of the document to update',
+          },
+          title: {
+            type: 'string',
+            description: 'New document title',
+          },
+          content: {
+            type: 'string',
+            description: 'New markdown content',
+          },
+          frontmatter: {
+            type: 'object',
+            description: 'New frontmatter as JSON object',
+            additionalProperties: true,
+          },
+          folderId: {
+            type: 'string',
+            description: 'Move document to a different folder',
+          },
+          changeSummary: {
+            type: 'string',
+            description: 'Summary of changes for version history (max 500 characters)',
+          },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'delete_document',
+      description: 'Archive a document (soft delete). Document can be restored later.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'The UUID of the document to archive',
+          },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'search_documents',
+      description: 'Full-text search across documents. Returns matching documents with content excerpts.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Search query (minimum 2 characters)',
+          },
+          projectId: {
+            type: 'string',
+            description: 'Limit search to specific project',
+          },
+          folderId: {
+            type: 'string',
+            description: 'Limit search to specific folder',
+          },
+          limit: {
+            type: 'number',
+            description: 'Maximum results to return (default: 20, max: 100)',
+          },
+        },
+        required: ['query'],
+      },
+    },
+    {
+      name: 'get_document_versions',
+      description: 'Get the version history of a document.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          documentId: {
+            type: 'string',
+            description: 'The UUID of the document',
+          },
+        },
+        required: ['documentId'],
+      },
+    },
+    {
+      name: 'get_document_version',
+      description: 'Get a specific version of a document.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          documentId: {
+            type: 'string',
+            description: 'The UUID of the document',
+          },
+          version: {
+            type: 'number',
+            description: 'Version number to retrieve',
+          },
+        },
+        required: ['documentId', 'version'],
+      },
+    },
+    {
+      name: 'restore_document_version',
+      description: 'Restore a document to a previous version. Creates a new version with the restored content.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          documentId: {
+            type: 'string',
+            description: 'The UUID of the document',
+          },
+          version: {
+            type: 'number',
+            description: 'Version number to restore to',
+          },
+        },
+        required: ['documentId', 'version'],
+      },
+    },
+    {
+      name: 'add_document_tags',
+      description: 'Add tags to a document. Maximum 10 tags per document.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          documentId: {
+            type: 'string',
+            description: 'The UUID of the document',
+          },
+          tagIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Tag UUIDs to add (max 10 total on document)',
+          },
+        },
+        required: ['documentId', 'tagIds'],
+      },
+    },
+    {
+      name: 'remove_document_tag',
+      description: 'Remove a tag from a document.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          documentId: {
+            type: 'string',
+            description: 'The UUID of the document',
+          },
+          tagId: {
+            type: 'string',
+            description: 'The UUID of the tag to remove',
+          },
+        },
+        required: ['documentId', 'tagId'],
+      },
+    },
+
+    // ============ Document Folder Tools ============
+    {
+      name: 'list_document_folders',
+      description: 'List document folders (flat list). Use get_document_folder_tree for hierarchical view.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: {
+            type: 'string',
+            description: 'Filter by project UUID (null for workspace-level folders)',
+          },
+          parentId: {
+            type: 'string',
+            description: 'Filter by parent folder UUID (null for root folders)',
+          },
+          includeArchived: {
+            type: 'boolean',
+            description: 'Include archived folders (default: false)',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_document_folder_tree',
+      description: 'Get hierarchical folder tree structure with document counts.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: {
+            type: 'string',
+            description: 'Filter by project UUID (null for workspace-level folders)',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_document_folder',
+      description: 'Get a document folder by ID with its document count.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'The UUID of the folder',
+          },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'create_document_folder',
+      description: 'Create a new document folder. Folders can be nested within other folders.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Folder name (max 255 characters)',
+          },
+          parentId: {
+            type: 'string',
+            description: 'Parent folder UUID for nested folders',
+          },
+          projectId: {
+            type: 'string',
+            description: 'Project UUID for project-level folder (null for workspace-level)',
+          },
+        },
+        required: ['name'],
+      },
+    },
+    {
+      name: 'update_document_folder',
+      description: 'Update a document folder (rename or move to different parent).',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'The UUID of the folder to update',
+          },
+          name: {
+            type: 'string',
+            description: 'New folder name',
+          },
+          parentId: {
+            type: 'string',
+            description: 'New parent folder UUID (use null for root)',
+          },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'delete_document_folder',
+      description: 'Delete a document folder. Child folders are moved to the parent, and documents have their folder reference cleared.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'The UUID of the folder to delete',
+          },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'reorder_document_folders',
+      description: 'Reorder document folders by setting their sort order.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            description: 'Array of folder IDs with their new sort orders',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', description: 'Folder UUID' },
+                sortOrder: { type: 'number', description: 'New sort order (0-based)' },
+              },
+              required: ['id', 'sortOrder'],
+            },
+          },
+        },
+        required: ['items'],
+      },
+    },
   ],
 }));
 
@@ -1925,6 +2466,46 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      // Tag handlers
+      case 'list_tags': {
+        const result = await apiClient.listTags();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_tag': {
+        const { id } = args as { id: string };
+        const result = await apiClient.getTag(id);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'create_tag': {
+        const { name, color } = args as { name: string; color?: string };
+        const result = await apiClient.createTag({ name, color });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'update_tag': {
+        const { id, name, color } = args as { id: string; name?: string; color?: string };
+        const result = await apiClient.updateTag(id, { name, color });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'delete_tag': {
+        const { id } = args as { id: string };
+        await apiClient.deleteTag(id);
+        return {
+          content: [{ type: 'text', text: 'Tag deleted successfully' }],
+        };
+      }
+
       // Project Management handlers
       case 'list_projects': {
         const { includeArchived } = args as { includeArchived?: boolean };
@@ -1964,8 +2545,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'list_features': {
-        const { projectId, includeArchived } = args as { projectId: string; includeArchived?: boolean };
-        const result = await apiClient.listFeatures(projectId, { includeArchived });
+        const { projectId, includeArchived, compact } = args as { projectId: string; includeArchived?: boolean; compact?: boolean };
+        const result = await apiClient.listFeatures(projectId, { includeArchived, compact });
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -2061,6 +2642,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'list_feature_comments': {
         const { featureId } = args as { featureId: string };
         const result = await apiClient.listFeatureComments(featureId);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'delete_feature': {
+        const { id } = args as { id: string };
+        await apiClient.deleteFeature(id);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Feature deleted successfully' }, null, 2) }],
+        };
+      }
+
+      // Feature Tag handlers
+      case 'add_feature_tags': {
+        const { featureId, tagIds } = args as { featureId: string; tagIds: string[] };
+        await apiClient.addFeatureTags(featureId, tagIds);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Tags added to feature successfully' }, null, 2) }],
+        };
+      }
+
+      case 'remove_feature_tag': {
+        const { featureId, tagId } = args as { featureId: string; tagId: string };
+        await apiClient.removeFeatureTag(featureId, tagId);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Tag removed from feature successfully' }, null, 2) }],
+        };
+      }
+
+      case 'get_feature_tags': {
+        const { featureId } = args as { featureId: string };
+        const result = await apiClient.getFeatureTags(featureId);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -2221,6 +2835,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'get_task_history': {
         const { id } = args as { id: string };
         const result = await apiClient.getTaskHistory(id);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'delete_task': {
+        const { id } = args as { id: string };
+        await apiClient.deleteTask(id);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Task deleted successfully' }, null, 2) }],
+        };
+      }
+
+      // Task Tag handlers
+      case 'add_task_tags': {
+        const { taskId, tagIds } = args as { taskId: string; tagIds: string[] };
+        await apiClient.addTaskTags(taskId, tagIds);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Tags added to task successfully' }, null, 2) }],
+        };
+      }
+
+      case 'remove_task_tag': {
+        const { taskId, tagId } = args as { taskId: string; tagId: string };
+        await apiClient.removeTaskTag(taskId, tagId);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Tag removed from task successfully' }, null, 2) }],
+        };
+      }
+
+      case 'get_task_tags': {
+        const { taskId } = args as { taskId: string };
+        const result = await apiClient.getTaskTags(taskId);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -2970,6 +3617,209 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const result = await apiClient.trackPluginInstall(nameOrId, { version, source });
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      // ============ Document Tool Handlers ============
+      case 'list_documents': {
+        const params = args as {
+          projectId?: string;
+          folderId?: string;
+          search?: string;
+          tagIds?: string[];
+          includeArchived?: boolean;
+          page?: number;
+          limit?: number;
+        };
+        const result = await apiClient.listDocuments(params);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_document': {
+        const { id } = args as { id: string };
+        const result = await apiClient.getDocument(id);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'create_document': {
+        const { title, content, frontmatter, folderId, projectId, tagIds } = args as {
+          title: string;
+          content?: string;
+          frontmatter?: Record<string, unknown>;
+          folderId?: string;
+          projectId?: string;
+          tagIds?: string[];
+        };
+        const result = await apiClient.createDocument({
+          title,
+          content,
+          frontmatter,
+          folderId,
+          projectId,
+          tagIds,
+        });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'update_document': {
+        const { id, title, content, frontmatter, folderId, changeSummary } = args as {
+          id: string;
+          title?: string;
+          content?: string;
+          frontmatter?: Record<string, unknown>;
+          folderId?: string;
+          changeSummary?: string;
+        };
+        const result = await apiClient.updateDocument(id, {
+          title,
+          content,
+          frontmatter,
+          folderId,
+          changeSummary,
+        });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'delete_document': {
+        const { id } = args as { id: string };
+        await apiClient.deleteDocument(id);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Document deleted (archived) successfully' }, null, 2) }],
+        };
+      }
+
+      case 'search_documents': {
+        const { query, projectId, folderId, limit } = args as {
+          query: string;
+          projectId?: string;
+          folderId?: string;
+          limit?: number;
+        };
+        const result = await apiClient.searchDocuments({ query, projectId, folderId, limit });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_document_versions': {
+        const { documentId } = args as { documentId: string };
+        const result = await apiClient.getDocumentVersions(documentId);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_document_version': {
+        const { documentId, version } = args as { documentId: string; version: number };
+        const result = await apiClient.getDocumentVersion(documentId, version);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'restore_document_version': {
+        const { documentId, version } = args as { documentId: string; version: number };
+        const result = await apiClient.restoreDocumentVersion(documentId, version);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'add_document_tags': {
+        const { documentId, tagIds } = args as { documentId: string; tagIds: string[] };
+        await apiClient.addDocumentTags(documentId, tagIds);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Tags added successfully' }, null, 2) }],
+        };
+      }
+
+      case 'remove_document_tag': {
+        const { documentId, tagId } = args as { documentId: string; tagId: string };
+        await apiClient.removeDocumentTag(documentId, tagId);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Tag removed successfully' }, null, 2) }],
+        };
+      }
+
+      // ============ Document Folder Tool Handlers ============
+      case 'list_document_folders': {
+        const params = args as {
+          projectId?: string;
+          parentId?: string;
+          includeArchived?: boolean;
+        };
+        const result = await apiClient.listDocumentFolders(params);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_document_folder_tree': {
+        const params = args as {
+          projectId?: string;
+          includeArchived?: boolean;
+        };
+        const result = await apiClient.getDocumentFolderTree(params);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_document_folder': {
+        const { id } = args as { id: string };
+        const result = await apiClient.getDocumentFolder(id);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'create_document_folder': {
+        const { name, parentId, projectId } = args as {
+          name: string;
+          parentId?: string;
+          projectId?: string;
+        };
+        const result = await apiClient.createDocumentFolder({ name, parentId, projectId });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'update_document_folder': {
+        const { id, name, parentId } = args as {
+          id: string;
+          name?: string;
+          parentId?: string;
+        };
+        const result = await apiClient.updateDocumentFolder(id, { name, parentId });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'delete_document_folder': {
+        const { id } = args as { id: string };
+        await apiClient.deleteDocumentFolder(id);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Folder deleted successfully' }, null, 2) }],
+        };
+      }
+
+      case 'reorder_document_folders': {
+        const { items } = args as {
+          items: Array<{ id: string; sortOrder: number }>;
+        };
+        await apiClient.reorderDocumentFolders({ items });
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'Folders reordered successfully' }, null, 2) }],
         };
       }
 

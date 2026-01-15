@@ -18,6 +18,23 @@ export interface SwitchWorkspaceResponse {
   workspace: Workspace;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  createdAt?: string;
+}
+
+export interface CreateTagInput {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTagInput {
+  name?: string;
+  color?: string;
+}
+
 export interface Prompt {
   id: string;
   title: string;
@@ -1128,6 +1145,137 @@ export interface TrackPluginInstallInput {
   source?: string;
 }
 
+// ============ Document Types ============
+
+export interface DocumentFolderInfo {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface DocumentTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface Document {
+  id: string;
+  tenantId: string;
+  projectId: string | null;
+  folderId: string | null;
+  title: string;
+  slug: string;
+  content: string;
+  frontmatter: Record<string, unknown>;
+  version: number;
+  isArchived: boolean;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  folder?: DocumentFolderInfo | null;
+  tags?: DocumentTag[];
+}
+
+export interface DocumentVersion {
+  id: string;
+  documentId: string;
+  version: number;
+  title: string;
+  content: string;
+  frontmatter: Record<string, unknown>;
+  changeSummary: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface DocumentSearchResult {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  projectId: string | null;
+  folder?: DocumentFolderInfo | null;
+  tags?: DocumentTag[];
+  updatedAt: string;
+}
+
+export interface DocumentFolder {
+  id: string;
+  tenantId: string;
+  projectId: string | null;
+  parentId: string | null;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  children?: DocumentFolder[];
+  documentCount?: number;
+}
+
+export interface DocumentFolderTree {
+  folders: DocumentFolder[];
+  totalCount?: number;
+}
+
+export interface CreateDocumentInput {
+  title: string;
+  content?: string;
+  frontmatter?: Record<string, unknown>;
+  folderId?: string;
+  projectId?: string;
+  tagIds?: string[];
+}
+
+export interface UpdateDocumentInput {
+  title?: string;
+  content?: string;
+  frontmatter?: Record<string, unknown>;
+  folderId?: string;
+  changeSummary?: string;
+}
+
+export interface DocumentQueryParams {
+  projectId?: string;
+  folderId?: string;
+  search?: string;
+  tagIds?: string[];
+  includeArchived?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface DocumentSearchParams {
+  query: string;
+  projectId?: string;
+  folderId?: string;
+  limit?: number;
+}
+
+export interface CreateDocumentFolderInput {
+  name: string;
+  parentId?: string;
+  projectId?: string;
+}
+
+export interface UpdateDocumentFolderInput {
+  name?: string;
+  parentId?: string;
+}
+
+export interface DocumentFolderQueryParams {
+  projectId?: string;
+  parentId?: string;
+  includeArchived?: boolean;
+}
+
+export interface ReorderDocumentFoldersInput {
+  items: Array<{ id: string; sortOrder: number }>;
+}
+
 export class ThinkPromptApiClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
@@ -1378,9 +1526,10 @@ export class ThinkPromptApiClient {
 
   // ============ Feature Methods ============
 
-  async listFeatures(projectId: string, params?: { includeArchived?: boolean }): Promise<Feature[]> {
+  async listFeatures(projectId: string, params?: { includeArchived?: boolean; compact?: boolean }): Promise<Feature[]> {
     const searchParams = new URLSearchParams();
     if (params?.includeArchived) searchParams.set('includeArchived', 'true');
+    if (params?.compact) searchParams.set('compact', 'true');
     const query = searchParams.toString();
     return this.request<Feature[]>(`/projects/${projectId}/features${query ? `?${query}` : ''}`);
   }
@@ -1455,6 +1604,31 @@ export class ThinkPromptApiClient {
       method: 'POST',
       body: JSON.stringify(input),
     });
+  }
+
+  async deleteFeature(id: string): Promise<void> {
+    await this.request<void>(`/features/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ Feature Tag Methods ============
+
+  async addFeatureTags(featureId: string, tagIds: string[]): Promise<void> {
+    await this.request<void>(`/features/${featureId}/tags`, {
+      method: 'POST',
+      body: JSON.stringify({ tagIds }),
+    });
+  }
+
+  async removeFeatureTag(featureId: string, tagId: string): Promise<void> {
+    await this.request<void>(`/features/${featureId}/tags/${tagId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getFeatureTags(featureId: string): Promise<Tag[]> {
+    return this.request<Tag[]>(`/features/${featureId}/tags`);
   }
 
   // ============ AI Generation Methods ============
@@ -1547,6 +1721,31 @@ export class ThinkPromptApiClient {
       method: 'POST',
       body: JSON.stringify(input),
     });
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    await this.request<void>(`/tasks/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ Task Tag Methods ============
+
+  async addTaskTags(taskId: string, tagIds: string[]): Promise<void> {
+    await this.request<void>(`/tasks/${taskId}/tags`, {
+      method: 'POST',
+      body: JSON.stringify({ tagIds }),
+    });
+  }
+
+  async removeTaskTag(taskId: string, tagId: string): Promise<void> {
+    await this.request<void>(`/tasks/${taskId}/tags/${tagId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getTaskTags(taskId: string): Promise<Tag[]> {
+    return this.request<Tag[]>(`/tasks/${taskId}/tags`);
   }
 
   // ============ Comment Methods ============
@@ -1905,6 +2104,165 @@ export class ThinkPromptApiClient {
     return this.request<{ success: boolean }>(`/plugins/${encodeURIComponent(nameOrId)}/install`, {
       method: 'POST',
       body: JSON.stringify(input ?? {}),
+    });
+  }
+
+  // ============ Document Methods ============
+
+  async listDocuments(params?: DocumentQueryParams): Promise<PaginatedResponse<Document>> {
+    const searchParams = new URLSearchParams();
+    if (params?.projectId) searchParams.set('projectId', params.projectId);
+    if (params?.folderId) searchParams.set('folderId', params.folderId);
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.tagIds?.length) searchParams.set('tagIds', params.tagIds.join(','));
+    if (params?.includeArchived) searchParams.set('includeArchived', 'true');
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return this.request<PaginatedResponse<Document>>(`/documents${query ? `?${query}` : ''}`);
+  }
+
+  async getDocument(id: string): Promise<Document> {
+    return this.request<Document>(`/documents/${id}`);
+  }
+
+  async createDocument(input: CreateDocumentInput): Promise<Document> {
+    return this.request<Document>('/documents', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async updateDocument(id: string, input: UpdateDocumentInput): Promise<Document> {
+    return this.request<Document>(`/documents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    await this.request<void>(`/documents/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async searchDocuments(params: DocumentSearchParams): Promise<DocumentSearchResult[]> {
+    const searchParams = new URLSearchParams();
+    searchParams.set('query', params.query);
+    if (params.projectId) searchParams.set('projectId', params.projectId);
+    if (params.folderId) searchParams.set('folderId', params.folderId);
+    if (params.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return this.request<DocumentSearchResult[]>(`/documents/search?${query}`);
+  }
+
+  async getDocumentVersions(documentId: string): Promise<DocumentVersion[]> {
+    return this.request<DocumentVersion[]>(`/documents/${documentId}/versions`);
+  }
+
+  async getDocumentVersion(documentId: string, version: number): Promise<DocumentVersion> {
+    return this.request<DocumentVersion>(`/documents/${documentId}/versions/${version}`);
+  }
+
+  async restoreDocumentVersion(documentId: string, version: number): Promise<Document> {
+    return this.request<Document>(`/documents/${documentId}/restore/${version}`, {
+      method: 'POST',
+    });
+  }
+
+  async addDocumentTags(documentId: string, tagIds: string[]): Promise<void> {
+    await this.request<void>(`/documents/${documentId}/tags`, {
+      method: 'POST',
+      body: JSON.stringify({ tagIds }),
+    });
+  }
+
+  async removeDocumentTag(documentId: string, tagId: string): Promise<void> {
+    await this.request<void>(`/documents/${documentId}/tags/${tagId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getDocumentTags(documentId: string): Promise<Tag[]> {
+    return this.request<Tag[]>(`/documents/${documentId}/tags`);
+  }
+
+  // ============ Tag CRUD Methods ============
+
+  async listTags(): Promise<Tag[]> {
+    return this.request<Tag[]>('/tags');
+  }
+
+  async getTag(id: string): Promise<Tag> {
+    return this.request<Tag>(`/tags/${id}`);
+  }
+
+  async createTag(input: CreateTagInput): Promise<Tag> {
+    return this.request<Tag>('/tags', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async updateTag(id: string, input: UpdateTagInput): Promise<Tag> {
+    return this.request<Tag>(`/tags/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async deleteTag(id: string): Promise<void> {
+    await this.request<void>(`/tags/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ Document Folder Methods ============
+
+  async listDocumentFolders(params?: DocumentFolderQueryParams): Promise<DocumentFolder[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.projectId) searchParams.set('projectId', params.projectId);
+    if (params?.parentId) searchParams.set('parentId', params.parentId);
+    if (params?.includeArchived) searchParams.set('includeArchived', 'true');
+    const query = searchParams.toString();
+    return this.request<DocumentFolder[]>(`/document-folders${query ? `?${query}` : ''}`);
+  }
+
+  async getDocumentFolderTree(params?: DocumentFolderQueryParams): Promise<DocumentFolderTree> {
+    const searchParams = new URLSearchParams();
+    if (params?.projectId) searchParams.set('projectId', params.projectId);
+    const query = searchParams.toString();
+    return this.request<DocumentFolderTree>(`/document-folders/tree${query ? `?${query}` : ''}`);
+  }
+
+  async getDocumentFolder(id: string): Promise<DocumentFolder> {
+    return this.request<DocumentFolder>(`/document-folders/${id}`);
+  }
+
+  async createDocumentFolder(input: CreateDocumentFolderInput): Promise<DocumentFolder> {
+    return this.request<DocumentFolder>('/document-folders', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async updateDocumentFolder(id: string, input: UpdateDocumentFolderInput): Promise<DocumentFolder> {
+    return this.request<DocumentFolder>(`/document-folders/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async deleteDocumentFolder(id: string): Promise<void> {
+    await this.request<void>(`/document-folders/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async reorderDocumentFolders(input: ReorderDocumentFoldersInput): Promise<void> {
+    await this.request<void>('/document-folders/reorder', {
+      method: 'POST',
+      body: JSON.stringify(input),
     });
   }
 }
