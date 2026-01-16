@@ -32,11 +32,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://bitbucket.org/vernes_p/thinkprompt-mcp.git"
+    "url": "git+https://github.com/vernesP/thinkprompt-mcp.git"
   },
-  "homepage": "https://bitbucket.org/vernes_p/thinkprompt-mcp#readme",
+  "homepage": "https://github.com/vernesP/thinkprompt-mcp#readme",
   "bugs": {
-    "url": "https://bitbucket.org/vernes_p/thinkprompt-mcp/issues"
+    "url": "https://github.com/vernesP/thinkprompt-mcp/issues"
   },
   "engines": {
     "node": ">=18.0.0"
