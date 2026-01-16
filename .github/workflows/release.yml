@@ -28,8 +28,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish to npm with provenance
-        run: npm publish --access public --provenance
+      - name: Publish to npm
+        run: npm publish --access public
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
