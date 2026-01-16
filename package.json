@@ -32,11 +32,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vernesP/thinkprompt-mcp.git"
+    "url": "git+https://github.com/Honeyfield-Org/thinkprompt-mcp.git"
   },
-  "homepage": "https://github.com/vernesP/thinkprompt-mcp#readme",
+  "homepage": "https://github.com/Honeyfield-Org/thinkprompt-mcp#readme",
   "bugs": {
-    "url": "https://github.com/vernesP/thinkprompt-mcp/issues"
+    "url": "https://github.com/Honeyfield-Org/thinkprompt-mcp/issues"
   },
   "engines": {
     "node": ">=18.0.0"
