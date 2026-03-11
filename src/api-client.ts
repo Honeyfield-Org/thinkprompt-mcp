@@ -35,18 +35,18 @@ export interface UpdateTagInput {
   color?: string;
 }
 
-export interface Prompt {
+export interface StyleGuide {
   id: string;
   title: string;
   description: string | null;
   content: string;
-  variables: PromptVariable[];
+  variables: StyleGuideVariable[];
   usageCount: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface PromptVariable {
+export interface StyleGuideVariable {
   name: string;
   type: 'text' | 'textarea' | 'number' | 'select' | 'date' | 'boolean';
   label?: string;
@@ -61,20 +61,20 @@ export interface PromptVariable {
   };
 }
 
-export interface CreatePromptInput {
+export interface CreateStyleGuideInput {
   title: string;
   content: string;
   description?: string;
-  variables?: PromptVariable[];
+  variables?: StyleGuideVariable[];
   isPublic?: boolean;
   tagIds?: string[];
 }
 
-export interface UpdatePromptInput {
+export interface UpdateStyleGuideInput {
   title?: string;
   content?: string;
   description?: string;
-  variables?: PromptVariable[];
+  variables?: StyleGuideVariable[];
   isPublic?: boolean;
   tagIds?: string[];
 }
@@ -130,15 +130,6 @@ export interface PaginatedResponse<T> {
     limit: number;
     totalPages: number;
   };
-}
-
-export interface ExecutionResult {
-  content: string;
-  tokensUsed: {
-    input: number;
-    output: number;
-  };
-  executionTimeMs: number;
 }
 
 // ============ Project Management Types ============
@@ -898,12 +889,12 @@ export class ThinkPromptApiClient {
     return JSON.parse(text) as T;
   }
 
-  async listPrompts(params?: {
+  async listStyleGuides(params?: {
     limit?: number;
     page?: number;
     search?: string;
     tags?: string[];
-  }): Promise<PaginatedResponse<Prompt>> {
+  }): Promise<PaginatedResponse<StyleGuide>> {
     const searchParams = new URLSearchParams();
     if (params?.limit) searchParams.set('limit', String(params.limit));
     if (params?.page) searchParams.set('page', String(params.page));
@@ -913,44 +904,24 @@ export class ThinkPromptApiClient {
     const query = searchParams.toString();
     const endpoint = `/prompts${query ? `?${query}` : ''}`;
 
-    return this.request<PaginatedResponse<Prompt>>(endpoint);
+    return this.request<PaginatedResponse<StyleGuide>>(endpoint);
   }
 
-  async getPrompt(id: string): Promise<Prompt> {
-    return this.request<Prompt>(`/prompts/${id}`);
+  async getStyleGuide(id: string): Promise<StyleGuide> {
+    return this.request<StyleGuide>(`/prompts/${id}`);
   }
 
-  async executePrompt(
-    id: string,
-    variables: Record<string, string | number | boolean>,
-    options?: {
-      provider?: string;
-      model?: string;
-    },
-  ): Promise<ExecutionResult> {
-    return this.request<ExecutionResult>(`/prompts/${id}/execute`, {
-      method: 'POST',
-      body: JSON.stringify({
-        variables,
-        provider: options?.provider,
-        model: options?.model,
-      }),
-    });
-  }
 
-  async getPromptVariables(id: string): Promise<PromptVariable[]> {
-    return this.request<PromptVariable[]>(`/prompts/${id}/variables`);
-  }
 
-  async createPrompt(input: CreatePromptInput): Promise<Prompt> {
-    return this.request<Prompt>('/prompts', {
+  async createStyleGuide(input: CreateStyleGuideInput): Promise<StyleGuide> {
+    return this.request<StyleGuide>('/prompts', {
       method: 'POST',
       body: JSON.stringify(input),
     });
   }
 
-  async updatePrompt(id: string, input: UpdatePromptInput): Promise<Prompt> {
-    return this.request<Prompt>(`/prompts/${id}`, {
+  async updateStyleGuide(id: string, input: UpdateStyleGuideInput): Promise<StyleGuide> {
+    return this.request<StyleGuide>(`/prompts/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
     });

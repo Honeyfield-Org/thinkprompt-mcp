@@ -126,14 +126,14 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
-      name: 'list_prompts',
-      description: 'List all available prompts from ThinkPrompt. Returns a paginated list of prompts with their titles, descriptions, and usage statistics.',
+      name: 'list_style_guides',
+      description: 'List all available style guides from ThinkPrompt. Returns a paginated list of style guides with their titles, descriptions, and usage statistics.',
       inputSchema: {
         type: 'object',
         properties: {
           limit: {
             type: 'number',
-            description: 'Maximum number of prompts to return (default: 20)',
+            description: 'Maximum number of style guides to return (default: 20)',
           },
           page: {
             type: 'number',
@@ -141,65 +141,51 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           search: {
             type: 'string',
-            description: 'Search query to filter prompts by title or description',
+            description: 'Search query to filter style guides by title or description',
           },
           tags: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Filter prompts by tags',
+            description: 'Filter style guides by tags',
           },
         },
       },
     },
     {
-      name: 'get_prompt',
-      description: 'Get detailed information about a specific prompt, including its content and variables.',
+      name: 'get_style_guide',
+      description: 'Get detailed information about a specific style guide, including its content.',
       inputSchema: {
         type: 'object',
         properties: {
           id: {
             type: 'string',
-            description: 'The UUID of the prompt to retrieve',
+            description: 'The UUID of the style guide to retrieve',
           },
         },
         required: ['id'],
       },
     },
-    {
-      name: 'get_prompt_variables',
-      description: 'Get the list of variables required by a prompt, with their types and descriptions.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          id: {
-            type: 'string',
-            description: 'The UUID of the prompt',
-          },
-        },
-        required: ['id'],
-      },
-    },
-    {
-      name: 'create_prompt',
-      description: 'Create a new prompt with title, content, and optional variables.',
+{
+      name: 'create_style_guide',
+      description: 'Create a new style guide with title, content, and optional variables.',
       inputSchema: {
         type: 'object',
         properties: {
           title: {
             type: 'string',
-            description: 'The title of the prompt',
+            description: 'The title of the style guide',
           },
           content: {
             type: 'string',
-            description: 'The prompt content with {{variable}} placeholders',
+            description: 'The style guide content with {{variable}} placeholders',
           },
           description: {
             type: 'string',
-            description: 'Optional description of the prompt',
+            description: 'Optional description of the style guide',
           },
           variables: {
             type: 'array',
-            description: 'List of variables used in the prompt',
+            description: 'List of variables used in the style guide',
             items: {
               type: 'object',
               properties: {
@@ -224,33 +210,33 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           isPublic: {
             type: 'boolean',
-            description: 'Whether the prompt is publicly visible',
+            description: 'Whether the style guide is publicly visible',
           },
         },
         required: ['title', 'content'],
       },
     },
     {
-      name: 'update_prompt',
-      description: 'Update an existing prompt. Only include fields you want to change.',
+      name: 'update_style_guide',
+      description: 'Update an existing style guide. Only include fields you want to change.',
       inputSchema: {
         type: 'object',
         properties: {
           id: {
             type: 'string',
-            description: 'The UUID of the prompt to update',
+            description: 'The UUID of the style guide to update',
           },
           title: {
             type: 'string',
-            description: 'New title for the prompt',
+            description: 'New title for the style guide',
           },
           content: {
             type: 'string',
-            description: 'New prompt content with {{variable}} placeholders',
+            description: 'New style guide content with {{variable}} placeholders',
           },
           description: {
             type: 'string',
-            description: 'New description of the prompt',
+            description: 'New description of the style guide',
           },
           variables: {
             type: 'array',
@@ -279,7 +265,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           isPublic: {
             type: 'boolean',
-            description: 'Whether the prompt is publicly visible',
+            description: 'Whether the style guide is publicly visible',
           },
         },
         required: ['id'],
@@ -2068,30 +2054,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case 'list_prompts': {
+      case 'list_style_guides': {
         const params = args as {
           limit?: number;
           page?: number;
           search?: string;
           tags?: string[];
         };
-        const result = await apiClient.listPrompts(params);
+        const result = await apiClient.listStyleGuides(params);
         return jsonResponse(result);
       }
 
-      case 'get_prompt': {
+      case 'get_style_guide': {
         const { id } = args as { id: string };
-        const result = await apiClient.getPrompt(id);
+        const result = await apiClient.getStyleGuide(id);
         return jsonResponse(result);
       }
 
-      case 'get_prompt_variables': {
-        const { id } = args as { id: string };
-        const result = await apiClient.getPromptVariables(id);
-        return jsonResponse(result);
-      }
-
-      case 'create_prompt': {
+case 'create_style_guide': {
         const { title, content, description, variables, isPublic } = args as {
           title: string;
           content: string;
@@ -2107,7 +2087,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           }>;
           isPublic?: boolean;
         };
-        const result = await apiClient.createPrompt({
+        const result = await apiClient.createStyleGuide({
           title,
           content,
           description,
@@ -2117,7 +2097,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return jsonResponse(result);
       }
 
-      case 'update_prompt': {
+      case 'update_style_guide': {
         const { id, title, content, description, variables, isPublic } = args as {
           id: string;
           title?: string;
@@ -2134,7 +2114,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           }>;
           isPublic?: boolean;
         };
-        const result = await apiClient.updatePrompt(id, {
+        const result = await apiClient.updateStyleGuide(id, {
           title,
           content,
           description,
@@ -3059,16 +3039,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // Resource definitions (expose prompts, templates, workflows, test sessions, and test issues as resources)
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
-    const [promptsResult, templatesResult, workflowsResult] = await Promise.all([
-      apiClient.listPrompts({ limit: 100 }),
+    const [styleGuidesResult, templatesResult, workflowsResult] = await Promise.all([
+      apiClient.listStyleGuides({ limit: 100 }),
       apiClient.listTemplates({ limit: 100 }),
       apiClient.listWorkflows({ limit: 100 }),
                 ]);
 
-    const promptResources = promptsResult.data.map((prompt) => ({
-      uri: `prompt://${prompt.id}`,
-      name: prompt.title,
-      description: prompt.description ?? undefined,
+    const styleGuideResources = styleGuidesResult.data.map((styleGuide) => ({
+      uri: `style-guide://${styleGuide.id}`,
+      name: styleGuide.title,
+      description: styleGuide.description ?? undefined,
       mimeType: 'text/plain',
     }));
 
@@ -3087,7 +3067,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     }));
 
     return {
-      resources: [...promptResources, ...templateResources, ...workflowResources],
+      resources: [...styleGuideResources, ...templateResources, ...workflowResources],
     };
   } catch {
     return { resources: [] };
@@ -3099,26 +3079,26 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const { uri } = request.params;
 
   // Handle prompt resources
-  if (uri.startsWith('prompt://')) {
-    const promptId = uri.replace('prompt://', '');
-    const prompt = await apiClient.getPrompt(promptId);
+  if (uri.startsWith('style-guide://')) {
+    const styleGuideId = uri.replace('style-guide://', '');
+    const styleGuide = await apiClient.getStyleGuide(styleGuideId);
 
-    const content = `# ${prompt.title}
+    const content = `# ${styleGuide.title}
 
-${prompt.description ?? ''}
+${styleGuide.description ?? ''}
 
 ## Content
-${prompt.content}
+${styleGuide.content}
 
 ## Variables
-${prompt.variables.length > 0
-      ? prompt.variables.map((v) => `- **${v.name}** (${v.type}): ${v.description ?? 'No description'}`).join('\n')
+${styleGuide.variables.length > 0
+      ? styleGuide.variables.map((v) => `- **${v.name}** (${v.type}): ${v.description ?? 'No description'}`).join('\n')
       : 'No variables required'}
 
 ## Statistics
-- Usage count: ${prompt.usageCount}
-- Created: ${prompt.createdAt}
-- Updated: ${prompt.updatedAt}
+- Usage count: ${styleGuide.usageCount}
+- Created: ${styleGuide.createdAt}
+- Updated: ${styleGuide.updatedAt}
 `;
 
     return {
