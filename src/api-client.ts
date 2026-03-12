@@ -902,26 +902,26 @@ export class ThinkPromptApiClient {
     if (params?.tags) searchParams.set('tags', params.tags.join(','));
 
     const query = searchParams.toString();
-    const endpoint = `/prompts${query ? `?${query}` : ''}`;
+    const endpoint = `/style-guides${query ? `?${query}` : ''}`;
 
     return this.request<PaginatedResponse<StyleGuide>>(endpoint);
   }
 
   async getStyleGuide(id: string): Promise<StyleGuide> {
-    return this.request<StyleGuide>(`/prompts/${id}`);
+    return this.request<StyleGuide>(`/style-guides/${id}`);
   }
 
 
 
   async createStyleGuide(input: CreateStyleGuideInput): Promise<StyleGuide> {
-    return this.request<StyleGuide>('/prompts', {
+    return this.request<StyleGuide>('/style-guides', {
       method: 'POST',
       body: JSON.stringify(input),
     });
   }
 
   async updateStyleGuide(id: string, input: UpdateStyleGuideInput): Promise<StyleGuide> {
-    return this.request<StyleGuide>(`/prompts/${id}`, {
+    return this.request<StyleGuide>(`/style-guides/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
     });
