@@ -1,35 +1,35 @@
 # ThinkPrompt MCP Server
 
-MCP (Model Context Protocol) Server for ThinkPrompt - enables Claude and other AI tools to directly access the prompt management and project management system.
+> Model Context Protocol server for [ThinkPrompt](https://thinkprompt.ai) — connect Claude, Cursor, and other AI tools to your team\'s coding standards, requirements, and project management.
 
-## Features
+[![npm version](https://img.shields.io/npm/v/@honeyfield/thinkprompt-mcp.svg)](https://www.npmjs.com/package/@honeyfield/thinkprompt-mcp)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-- 📝 **Prompt Management** - Create, manage, and execute prompts with variables
-- 📋 **Template Library** - Example prompts and writing style guides
-- 🔄 **Workflow Automation** - Combine prompts, templates, and tasks into reusable sequences
-- 📊 **Project Management** - Full project, feature, and task tracking
-- 🤖 **AI Generation** - Generate tasks from features and features from documents
-- 🔍 **Quality Analytics** - Code quality tracking with ESLint, TypeScript, coverage metrics
-- 🧪 **Test Analytics** - QA session tracking with Playwright integration
-- 🔌 **Plugin Marketplace** - Browse and publish Claude Code plugins
+## Overview
+
+The ThinkPrompt MCP Server implements the [Model Context Protocol](https://modelcontextprotocol.io/) to bridge AI assistants with the ThinkPrompt platform. It provides **85 tools** that let AI agents manage style guides, requirements, projects, documents, workflows, and more — all from within your IDE.
 
 ## Installation
 
-No installation required! The MCP server runs via `npx` - just configure it in your Claude settings (see Configuration below).
+No installation required! The MCP server runs via `npx`:
+
+```bash
+npx @honeyfield/thinkprompt-mcp
+```
 
 ## Configuration
 
-The MCP Server requires two environment variables:
+### Environment Variables
 
-- `THINKPROMPT_API_URL`: URL of the ThinkPrompt API
-- `THINKPROMPT_API_KEY`: API key for authentication (create under `/api-keys`)
+| Variable | Description | Required |
+|---|---|---|
+| `THINKPROMPT_API_URL` | ThinkPrompt API base URL | Yes |
+| `THINKPROMPT_API_KEY` | API key (create at thinkprompt.ai/settings) | Yes |
 
-## Claude Desktop Integration
+### Claude Code / Cursor
 
-Add the following to your `claude_desktop_config.json`:
-
-**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+Add to your project\'s `.mcp.json` or global Claude settings:
 
 ```json
 {
@@ -46,240 +46,117 @@ Add the following to your `claude_desktop_config.json`:
 }
 ```
 
-## Using ThinkPrompt MCP with Claude Desktop
+### Claude Desktop
 
-### Getting Started
+Add to your `claude_desktop_config.json`:
 
-1. **Get your API Key**: Log into ThinkPrompt and navigate to `/api-keys` to create a new API key
-2. **Configure Claude Desktop**: Add the configuration above to your `claude_desktop_config.json` file, replacing `tp_your-api-key-here` with your actual API key
-3. **Restart Claude Desktop**: Close and reopen Claude Desktop to load the MCP server
-4. **Verify Connection**: In Claude Desktop, you should see the ThinkPrompt tools available. Try asking Claude: "List my workspaces" or "Show me all projects"
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
-### How It Works
+```json
+{
+  "mcpServers": {
+    "thinkprompt": {
+      "command": "npx",
+      "args": ["@honeyfield/thinkprompt-mcp"],
+      "env": {
+        "THINKPROMPT_API_URL": "https://thinkprompt-api-v2.azurewebsites.net/api/v1",
+        "THINKPROMPT_API_KEY": "tp_your-api-key-here"
+      }
+    }
+  }
+}
+```
 
-Once configured, Claude Desktop will automatically connect to the ThinkPrompt MCP server. You can then interact with ThinkPrompt directly through natural language:
+## Available Tools (85)
 
-- Ask Claude to list, create, or manage prompts
-- Request project and task information
-- Generate tasks from features using AI
-- Track code quality and test sessions
-- Browse the plugin marketplace
+### Style Guides (4)
+`list_style_guides` · `get_style_guide` · `create_style_guide` · `update_style_guide`
 
-The MCP server acts as a bridge between Claude and the ThinkPrompt API, translating your requests into API calls and returning the results in a conversational format.
+### Templates (4)
+`list_templates` · `get_template` · `create_template` · `update_template`
 
-### Troubleshooting
+### Workspaces (3)
+`list_workspaces` · `get_current_workspace` · `switch_workspace`
 
-| Issue | Solution |
-|-------|----------|
-| Tools not appearing | Restart Claude Desktop after saving config |
-| Authentication errors | Verify your API key is correct and active |
-| Connection timeout | Check that the API URL is accessible |
-| "npx not found" | Ensure Node.js (v18+) is installed and in PATH |
+### Tags (5)
+`list_tags` · `get_tag` · `create_tag` · `update_tag` · `delete_tag`
 
-## Available Tools
+### Projects (4)
+`list_projects` · `get_project` · `get_project_statistics` · `create_project`
 
-### Prompt Management
+### Workflows (8)
+`list_workflows` · `get_workflow` · `create_workflow` · `update_workflow` · `delete_workflow` · `validate_workflow` · `get_workflow_executions` · `get_workflow_execution`
 
-| Tool | Description |
-|------|-------------|
-| `list_prompts` | List all prompts (with search and filter) |
-| `get_prompt` | Get single prompt with details |
-| `execute_prompt` | Execute prompt with variables |
-| `get_prompt_variables` | Get variables of a prompt |
-| `create_prompt` | Create a new prompt |
-| `update_prompt` | Update an existing prompt |
+### Plugin Marketplace (6)
+`search_marketplace_plugins` · `get_marketplace_plugin` · `get_plugin_categories` · `get_featured_plugins` · `register_marketplace_plugin` · `track_plugin_install`
 
-### Workspace Management
+### Documents (13)
+`list_documents` · `get_document` · `create_document` · `update_document` · `delete_document` · `search_documents` · `get_document_versions` · `get_document_version` · `restore_document_version` · `add_document_tags` · `remove_document_tag` · `list_document_folders` · `get_document_folder_tree`
 
-| Tool | Description |
-|------|-------------|
-| `list_workspaces` | List all workspaces the user belongs to |
-| `get_current_workspace` | Get the currently active workspace |
-| `switch_workspace` | Switch to a different workspace |
+### Document Folders (5)
+`get_document_folder` · `create_document_folder` · `update_document_folder` · `delete_document_folder` · `reorder_document_folders`
 
-### Project Management
+### Requirements (20)
+`list_requirements` · `get_requirement` · `create_requirement` · `update_requirement` · `update_requirement_status` · `delete_requirement` · `search_requirements` · `list_acceptance_criteria` · `create_acceptance_criterion` · `update_acceptance_criterion` · `delete_acceptance_criterion` · `list_preconditions` · `create_precondition` · `update_precondition` · `delete_precondition` · `list_verification_tests` · `create_verification_test` · `update_verification_test` · `delete_verification_test` · `list_requirement_links`
 
-| Tool | Description |
-|------|-------------|
-| `list_projects` | List all projects in the current workspace |
-| `get_project` | Get detailed information about a project |
-| `get_project_statistics` | Get dashboard statistics for a project |
-| `create_project` | Create a new project |
-
-### Feature Management
-
-| Tool | Description |
-|------|-------------|
-| `list_features` | List all features/epics in a project (hierarchical) |
-| `create_feature` | Create a new feature/epic |
-| `update_feature_status` | Update the status of a feature |
-| `get_feature_history` | Get the change history of a feature |
-| `add_feature_comment` | Add a comment to a feature |
-| `list_feature_comments` | List all comments on a feature |
-
-### AI Generation
-
-| Tool | Description |
-|------|-------------|
-| `generate_tasks_from_feature` | Generate development tasks from a feature using AI |
-| `generate_tasks_bulk` | Generate tasks from all "ready_for_dev" features in a project |
-| `generate_features_from_document` | Generate features from a document/transcription using AI |
-
-### Task Management
-
-| Tool | Description |
-|------|-------------|
-| `list_tasks` | List tasks with optional filters |
-| `get_task` | Get task by ID or Kürzel (e.g., "TP-001") |
-| `create_task` | Create a new task in a project |
-| `update_task` | Update an existing task |
-| `update_task_status` | Quick update of task status |
-| `ai_edit_task` | Edit task content using AI |
-| `add_task_comment` | Add a comment to a task |
-| `list_task_comments` | List all comments on a task |
-| `get_task_history` | Get the change history of a task |
-
-### Template Management
-
-| Tool | Description |
-|------|-------------|
-| `list_templates` | Browse example prompts and style guides |
-| `get_template` | Get template details and use case hints |
-| `create_template` | Create a new template (example or style guide) |
-| `update_template` | Update an existing template |
-
-### Workflow Management
-
-| Tool | Description |
-|------|-------------|
-| `list_workflows` | List automation workflows |
-| `get_workflow` | Get workflow details with steps and resources |
-| `create_workflow` | Create workflow combining prompts, templates, tasks |
-| `update_workflow` | Update an existing workflow |
-| `delete_workflow` | Delete a workflow |
-| `validate_workflow` | Check workflow configuration |
-| `get_workflow_executions` | Get execution history for a workflow |
-| `get_workflow_execution` | Get details of a specific execution |
-
-### Quality Analytics
-
-| Tool | Description |
-|------|-------------|
-| `start_quality_analysis` | Begin a quality snapshot for a project |
-| `record_quality_metric` | Store ESLint, TypeScript, coverage, complexity metrics |
-| `report_quality_issue` | Report code quality issues with location and severity |
-| `bulk_report_quality_issues` | Report multiple issues at once |
-| `complete_quality_analysis` | Finalize analysis and calculate scores |
-| `delete_quality_snapshot` | Delete a quality snapshot |
-| `get_quality_overview` | Get dashboard with scores, trends, and issue breakdown |
-| `get_quality_trends` | Get metric trends over time |
-| `list_quality_snapshots` | List quality snapshots for a project |
-| `list_quality_issues` | List code quality issues with filters |
-
-### Test Analytics
-
-| Tool | Description |
-|------|-------------|
-| `start_test_session` | Start tracking QA/Playwright testing session |
-| `record_metric` | Log network requests, console messages, interactions |
-| `report_issue` | Document bugs with screenshots and environment info |
-| `end_test_session` | Complete session and get summary |
-| `list_test_sessions` | List test sessions with filters |
-| `get_test_session` | Get session details with metrics |
-| `list_test_issues` | List test issues with filters |
-| `get_test_issue` | Get details of a specific test issue |
-| `update_test_issue` | Update issue status or details |
-
-### Plugin Marketplace
-
-| Tool | Description |
-|------|-------------|
-| `search_marketplace_plugins` | Find Claude Code plugins by category, keywords |
-| `get_marketplace_plugin` | Get plugin details and install instructions |
-| `get_plugin_categories` | List all available plugin categories |
-| `get_featured_plugins` | Get featured/highlighted plugins |
-| `register_marketplace_plugin` | Publish a new plugin to the marketplace |
-| `track_plugin_install` | Track plugin installation for statistics |
+### Requirement Sub-entities (13)
+`create_requirement_link` · `delete_requirement_link` · `list_requirement_comments` · `create_requirement_comment` · `update_requirement_comment` · `delete_requirement_comment` · `add_requirement_tags` · `remove_requirement_tag` · `get_requirement_tags` · `calculate_requirement_quality` · `get_requirement_quality` · `get_requirement_activity` · *and more*
 
 ## Resources
 
-Prompts are also provided as Resources under `prompt://{id}`.
+Prompts are also provided as MCP Resources under `prompt://{id}`.
 
-## Example Usage in Claude
-
-### Prompt Management
-```
-Show me all available prompts with the tag "marketing"
-```
+## Example Usage
 
 ```
-Execute the prompt "blog-article-generator" with:
-- topic: "AI in Sales"
-- tone: "professional"
-```
-
-### Project & Task Management
-```
-List all projects in my workspace
-```
-
-```
-Show me all open tasks in project "Website Redesign"
-```
-
-```
-Create a new feature "User Authentication" in project TP
-```
-
-```
-Generate development tasks from feature "Login System"
-```
-
-```
-Update task TP-042 status to "in_progress"
-```
-
-### Quality Analytics
-```
-Run a quality analysis on the current project and store results
-```
-
-```
-Show me the quality trends for the last 30 days
-```
-
-```
-List all high-severity code quality issues
-```
-
-### Test Analytics
-```
-Start a test session for the homepage testing
-```
-
-```
-Report a bug found during testing with screenshot
-```
-
-```
-Show me all test issues from the last session
-```
-
-### Workflows
-```
-List all available workflows
-```
-
-```
-Create a workflow that combines the "code-review" template with task generation
+“Show me all style guides in my workspace”
+“Create a requirement for user authentication with acceptance criteria”
+“List all documents in the project”
+“Switch to workspace \'frontend-team\'”
+“Search requirements matching \'payment\'”
 ```
 
 ## Development
 
 ```bash
-# Develop with hot-reload
-npm run dev
+git clone https://github.com/Honeyfield-Org/thinkprompt-mcp.git
+cd thinkprompt-mcp
+pnpm install
+
+# Development with hot-reload
+pnpm dev
+
+# Build
+pnpm build
 
 # Test with MCP Inspector
-npm run inspect
+pnpm inspect
 ```
+
+### Project Structure
+
+```
+src/
+├── index.ts          # MCP server entry point (tool definitions & handlers)
+└── api-client.ts     # ThinkPrompt API client
+```
+
+## Troubleshooting
+
+| Issue | Solution |
+|---|---|
+| Tools not appearing | Restart Claude / Cursor after saving config |
+| Authentication errors | Verify your API key at thinkprompt.ai/settings |
+| Connection timeout | Check that the API URL is accessible |
+| `npx` not found | Ensure Node.js (v18+) is installed and in PATH |
+
+## Related Repos
+
+- [thinkprompt-frontend](https://github.com/Honeyfield-Org/thinkprompt-frontend) — Next.js Frontend
+- [thinkprompt-api](https://github.com/Honeyfield-Org/thinkprompt-api) — NestJS Backend API
+- [thinkprompt-plugin](https://github.com/Honeyfield-Org/thinkprompt-plugin) — Claude Code Plugin
+
+## License
+
+MIT — © [Honeyfield GmbH](https://honeyfield.at)
