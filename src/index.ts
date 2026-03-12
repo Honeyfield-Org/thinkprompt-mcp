@@ -109,7 +109,8 @@ const API_KEY = process.env.THINKPROMPT_API_KEY ?? '';
 const MCP_API_KEY = process.env.MCP_API_KEY ?? '';
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
 
-const apiClient = new ThinkPromptApiClient(API_URL, API_KEY);
+// Global apiClient for stdio mode; HTTP mode creates per-session clients
+let apiClient: ThinkPromptApiClient | null = null;
 
 // ============================================================
 // Tool definitions array — shared across all server instances
@@ -566,76 +567,76 @@ const TOOL_DEFINITIONS = [
 // Tool call handler — shared logic for all server instances
 // ============================================================
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleToolCall(name: string, args: any) {
+async function handleToolCall(name: string, args: any, client: ThinkPromptApiClient) {
   switch (name) {
     case 'list_style_guides': {
-      const result = await apiClient.listStyleGuides(args);
+      const result = await client.listStyleGuides(args);
       return jsonResponse(result);
     }
     case 'get_style_guide': {
-      const result = await apiClient.getStyleGuide(args.id);
+      const result = await client.getStyleGuide(args.id);
       return jsonResponse(result);
     }
     case 'create_style_guide': {
       const { title, content, description, variables, isPublic } = args;
-      const result = await apiClient.createStyleGuide({ title, content, description, variables, isPublic });
+      const result = await client.createStyleGuide({ title, content, description, variables, isPublic });
       return jsonResponse(result);
     }
     case 'update_style_guide': {
       const { id, title, content, description, variables, isPublic } = args;
-      const result = await apiClient.updateStyleGuide(id, { title, content, description, variables, isPublic });
+      const result = await client.updateStyleGuide(id, { title, content, description, variables, isPublic });
       return jsonResponse(result);
     }
     case 'list_workspaces': {
-      const workspaces = await apiClient.listWorkspaces();
-      const currentId = apiClient.getCurrentWorkspaceId();
+      const workspaces = await client.listWorkspaces();
+      const currentId = client.getCurrentWorkspaceId();
       return jsonResponse({ currentWorkspaceId: currentId, workspaces });
     }
     case 'get_current_workspace': {
-      const workspace = await apiClient.getCurrentWorkspace();
+      const workspace = await client.getCurrentWorkspace();
       if (!workspace) return jsonResponse({ message: 'No workspace selected or available' });
       return jsonResponse(workspace);
     }
     case 'switch_workspace': {
-      const result = await apiClient.switchWorkspace(args.workspaceId);
+      const result = await client.switchWorkspace(args.workspaceId);
       return jsonResponse(result);
     }
-    case 'list_tags': return jsonResponse(await apiClient.listTags());
-    case 'get_tag': return jsonResponse(await apiClient.getTag(args.id));
-    case 'create_tag': return jsonResponse(await apiClient.createTag({ name: args.name, color: args.color }));
-    case 'update_tag': return jsonResponse(await apiClient.updateTag(args.id, { name: args.name, color: args.color }));
-    case 'delete_tag': { await apiClient.deleteTag(args.id); return successResponse('Tag deleted successfully'); }
-    case 'list_projects': return jsonResponse(await apiClient.listProjects({ includeArchived: args.includeArchived }));
-    case 'get_project': return jsonResponse(await apiClient.getProject(args.id));
-    case 'get_project_statistics': return jsonResponse(await apiClient.getProjectStatistics(args.projectId));
-    case 'create_project': return jsonResponse(await apiClient.createProject({ name: args.name, slug: args.slug, description: args.description, links: args.links }));
-    case 'list_templates': return jsonResponse(await apiClient.listTemplates(args));
-    case 'get_template': return jsonResponse(await apiClient.getTemplate(args.id));
+    case 'list_tags': return jsonResponse(await client.listTags());
+    case 'get_tag': return jsonResponse(await client.getTag(args.id));
+    case 'create_tag': return jsonResponse(await client.createTag({ name: args.name, color: args.color }));
+    case 'update_tag': return jsonResponse(await client.updateTag(args.id, { name: args.name, color: args.color }));
+    case 'delete_tag': { await client.deleteTag(args.id); return successResponse('Tag deleted successfully'); }
+    case 'list_projects': return jsonResponse(await client.listProjects({ includeArchived: args.includeArchived }));
+    case 'get_project': return jsonResponse(await client.getProject(args.id));
+    case 'get_project_statistics': return jsonResponse(await client.getProjectStatistics(args.projectId));
+    case 'create_project': return jsonResponse(await client.createProject({ name: args.name, slug: args.slug, description: args.description, links: args.links }));
+    case 'list_templates': return jsonResponse(await client.listTemplates(args));
+    case 'get_template': return jsonResponse(await client.getTemplate(args.id));
     case 'create_template': {
       const { title, content, type, description, category, language, useCaseHints, isPublic, tagIds } = args;
-      return jsonResponse(await apiClient.createTemplate({ title, content, type, description, category, language, useCaseHints, isPublic, tagIds }));
+      return jsonResponse(await client.createTemplate({ title, content, type, description, category, language, useCaseHints, isPublic, tagIds }));
     }
     case 'update_template': {
       const { id, ...updateData } = args;
-      return jsonResponse(await apiClient.updateTemplate(id, updateData));
+      return jsonResponse(await client.updateTemplate(id, updateData));
     }
-    case 'list_workflows': return jsonResponse(await apiClient.listWorkflows(args));
-    case 'get_workflow': return jsonResponse(await apiClient.getWorkflow(args.id));
-    case 'create_workflow': return jsonResponse(await apiClient.createWorkflow(args));
-    case 'update_workflow': { const { id, ...data } = args; return jsonResponse(await apiClient.updateWorkflow(id, data)); }
-    case 'delete_workflow': { await apiClient.deleteWorkflow(args.id); return successResponse('Workflow deleted'); }
-    case 'validate_workflow': return jsonResponse(await apiClient.validateWorkflow(args.id));
-    case 'get_workflow_executions': return jsonResponse(await apiClient.getWorkflowExecutions(args.workflowId, { page: args.page, limit: args.limit }));
-    case 'get_workflow_execution': return jsonResponse(await apiClient.getWorkflowExecution(args.executionId));
-    case 'search_marketplace_plugins': return jsonResponse(await apiClient.searchMarketplacePlugins(args));
-    case 'get_marketplace_plugin': return jsonResponse(await apiClient.getMarketplacePlugin(args.nameOrId));
-    case 'get_plugin_categories': return jsonResponse(await apiClient.getPluginCategories());
-    case 'get_featured_plugins': return jsonResponse(await apiClient.getFeaturedPlugins());
-    case 'register_marketplace_plugin': return jsonResponse(await apiClient.registerMarketplacePlugin(args));
-    case 'track_plugin_install': return jsonResponse(await apiClient.trackPluginInstall(args.nameOrId, { version: args.version, source: args.source }));
+    case 'list_workflows': return jsonResponse(await client.listWorkflows(args));
+    case 'get_workflow': return jsonResponse(await client.getWorkflow(args.id));
+    case 'create_workflow': return jsonResponse(await client.createWorkflow(args));
+    case 'update_workflow': { const { id, ...data } = args; return jsonResponse(await client.updateWorkflow(id, data)); }
+    case 'delete_workflow': { await client.deleteWorkflow(args.id); return successResponse('Workflow deleted'); }
+    case 'validate_workflow': return jsonResponse(await client.validateWorkflow(args.id));
+    case 'get_workflow_executions': return jsonResponse(await client.getWorkflowExecutions(args.workflowId, { page: args.page, limit: args.limit }));
+    case 'get_workflow_execution': return jsonResponse(await client.getWorkflowExecution(args.executionId));
+    case 'search_marketplace_plugins': return jsonResponse(await client.searchMarketplacePlugins(args));
+    case 'get_marketplace_plugin': return jsonResponse(await client.getMarketplacePlugin(args.nameOrId));
+    case 'get_plugin_categories': return jsonResponse(await client.getPluginCategories());
+    case 'get_featured_plugins': return jsonResponse(await client.getFeaturedPlugins());
+    case 'register_marketplace_plugin': return jsonResponse(await client.registerMarketplacePlugin(args));
+    case 'track_plugin_install': return jsonResponse(await client.trackPluginInstall(args.nameOrId, { version: args.version, source: args.source }));
     case 'list_documents': {
       const { compact = true, ...params } = args;
-      const result = await apiClient.listDocuments(params);
+      const result = await client.listDocuments(params);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const responseData = (result as any)?.data;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -649,45 +650,45 @@ async function handleToolCall(name: string, args: any) {
       }
       return jsonResponse({ data: documents, meta });
     }
-    case 'get_document': return jsonResponse(await apiClient.getDocument(args.id));
-    case 'create_document': return jsonResponse(await apiClient.createDocument({ title: args.title, content: args.content, frontmatter: args.frontmatter, folderId: args.folderId, projectId: args.projectId, tagIds: args.tagIds }));
-    case 'update_document': return jsonResponse(await apiClient.updateDocument(args.id, { title: args.title, content: args.content, frontmatter: args.frontmatter, folderId: args.folderId, changeSummary: args.changeSummary }));
-    case 'delete_document': { await apiClient.deleteDocument(args.id); return successResponse('Document deleted (archived) successfully'); }
-    case 'search_documents': return jsonResponse(await apiClient.searchDocuments({ query: args.query, projectId: args.projectId, folderId: args.folderId, limit: args.limit }));
-    case 'get_document_versions': return jsonResponse(await apiClient.getDocumentVersions(args.documentId));
-    case 'get_document_version': return jsonResponse(await apiClient.getDocumentVersion(args.documentId, args.version));
-    case 'restore_document_version': return jsonResponse(await apiClient.restoreDocumentVersion(args.documentId, args.version));
-    case 'add_document_tags': { await apiClient.addDocumentTags(args.documentId, args.tagIds); return successResponse('Tags added successfully'); }
-    case 'remove_document_tag': { await apiClient.removeDocumentTag(args.documentId, args.tagId); return successResponse('Tag removed successfully'); }
-    case 'list_document_folders': return jsonResponse(await apiClient.listDocumentFolders(args));
-    case 'get_document_folder_tree': return jsonResponse(await apiClient.getDocumentFolderTree(args));
-    case 'get_document_folder': return jsonResponse(await apiClient.getDocumentFolder(args.id));
-    case 'create_document_folder': return jsonResponse(await apiClient.createDocumentFolder({ name: args.name, parentId: args.parentId, projectId: args.projectId }));
-    case 'update_document_folder': return jsonResponse(await apiClient.updateDocumentFolder(args.id, { name: args.name, parentId: args.parentId }));
-    case 'delete_document_folder': { await apiClient.deleteDocumentFolder(args.id); return successResponse('Folder deleted successfully'); }
-    case 'reorder_document_folders': { await apiClient.reorderDocumentFolders({ items: args.items }); return successResponse('Folders reordered successfully'); }
+    case 'get_document': return jsonResponse(await client.getDocument(args.id));
+    case 'create_document': return jsonResponse(await client.createDocument({ title: args.title, content: args.content, frontmatter: args.frontmatter, folderId: args.folderId, projectId: args.projectId, tagIds: args.tagIds }));
+    case 'update_document': return jsonResponse(await client.updateDocument(args.id, { title: args.title, content: args.content, frontmatter: args.frontmatter, folderId: args.folderId, changeSummary: args.changeSummary }));
+    case 'delete_document': { await client.deleteDocument(args.id); return successResponse('Document deleted (archived) successfully'); }
+    case 'search_documents': return jsonResponse(await client.searchDocuments({ query: args.query, projectId: args.projectId, folderId: args.folderId, limit: args.limit }));
+    case 'get_document_versions': return jsonResponse(await client.getDocumentVersions(args.documentId));
+    case 'get_document_version': return jsonResponse(await client.getDocumentVersion(args.documentId, args.version));
+    case 'restore_document_version': return jsonResponse(await client.restoreDocumentVersion(args.documentId, args.version));
+    case 'add_document_tags': { await client.addDocumentTags(args.documentId, args.tagIds); return successResponse('Tags added successfully'); }
+    case 'remove_document_tag': { await client.removeDocumentTag(args.documentId, args.tagId); return successResponse('Tag removed successfully'); }
+    case 'list_document_folders': return jsonResponse(await client.listDocumentFolders(args));
+    case 'get_document_folder_tree': return jsonResponse(await client.getDocumentFolderTree(args));
+    case 'get_document_folder': return jsonResponse(await client.getDocumentFolder(args.id));
+    case 'create_document_folder': return jsonResponse(await client.createDocumentFolder({ name: args.name, parentId: args.parentId, projectId: args.projectId }));
+    case 'update_document_folder': return jsonResponse(await client.updateDocumentFolder(args.id, { name: args.name, parentId: args.parentId }));
+    case 'delete_document_folder': { await client.deleteDocumentFolder(args.id); return successResponse('Folder deleted successfully'); }
+    case 'reorder_document_folders': { await client.reorderDocumentFolders({ items: args.items }); return successResponse('Folders reordered successfully'); }
     case 'list_requirements': {
       const { compact = true, ...params } = args;
-      const rawResult = await apiClient.listRequirements(params as ListRequirementsQuery);
+      const rawResult = await client.listRequirements(params as ListRequirementsQuery);
       if (compact) {
         const items = extractArray<Requirement>(rawResult);
         return jsonResponse(items.map(compactRequirement));
       }
       return jsonResponse(rawResult);
     }
-    case 'get_requirement': return jsonResponse(await apiClient.getRequirement(args.id));
-    case 'create_requirement': return jsonResponse(await apiClient.createRequirement(args as CreateRequirementInput));
-    case 'update_requirement': { const { id, ...updateData } = args; return jsonResponse(await apiClient.updateRequirement(id, updateData as UpdateRequirementInput)); }
-    case 'update_requirement_status': return jsonResponse(await apiClient.updateRequirementStatus(args.id, args.status));
-    case 'delete_requirement': { await apiClient.deleteRequirement(args.id); return successResponse('Requirement archived successfully'); }
+    case 'get_requirement': return jsonResponse(await client.getRequirement(args.id));
+    case 'create_requirement': return jsonResponse(await client.createRequirement(args as CreateRequirementInput));
+    case 'update_requirement': { const { id, ...updateData } = args; return jsonResponse(await client.updateRequirement(id, updateData as UpdateRequirementInput)); }
+    case 'update_requirement_status': return jsonResponse(await client.updateRequirementStatus(args.id, args.status));
+    case 'delete_requirement': { await client.deleteRequirement(args.id); return successResponse('Requirement archived successfully'); }
     case 'search_requirements': {
-      const rawResult = await apiClient.searchRequirements({ q: args.q, includeArchived: args.includeArchived });
+      const rawResult = await client.searchRequirements({ q: args.q, includeArchived: args.includeArchived });
       const items = extractArray<Requirement>(rawResult);
       return jsonResponse(items.map(compactRequirement));
     }
     case 'list_acceptance_criteria': {
       const { requirementId, compact = true, limit = 50 } = args;
-      const rawResult = await apiClient.listAcceptanceCriteria(requirementId);
+      const rawResult = await client.listAcceptanceCriteria(requirementId);
       let items = extractArray<AcceptanceCriterion>(rawResult);
       if (items.length > limit) items = items.slice(0, limit);
       if (compact) return jsonResponse(items.map(compactAcceptanceCriterion));
@@ -695,13 +696,13 @@ async function handleToolCall(name: string, args: any) {
     }
     case 'create_acceptance_criterion': {
       const { requirementId, scenarioName, givenContext, whenAction, thenOutcome, type, sortOrder } = args;
-      return jsonResponse(await apiClient.createAcceptanceCriterion(requirementId, { scenarioName, givenContext, whenAction, thenOutcome, type, sortOrder }));
+      return jsonResponse(await client.createAcceptanceCriterion(requirementId, { scenarioName, givenContext, whenAction, thenOutcome, type, sortOrder }));
     }
-    case 'update_acceptance_criterion': { const { id, ...data } = args; return jsonResponse(await apiClient.updateAcceptanceCriterion(id, data)); }
-    case 'delete_acceptance_criterion': { await apiClient.deleteAcceptanceCriterion(args.id); return successResponse('Acceptance criterion deleted successfully'); }
+    case 'update_acceptance_criterion': { const { id, ...data } = args; return jsonResponse(await client.updateAcceptanceCriterion(id, data)); }
+    case 'delete_acceptance_criterion': { await client.deleteAcceptanceCriterion(args.id); return successResponse('Acceptance criterion deleted successfully'); }
     case 'list_preconditions': {
       const { requirementId, compact = true, limit = 50 } = args;
-      const raw = await apiClient.listPreconditions(requirementId);
+      const raw = await client.listPreconditions(requirementId);
       let items = extractArray<Precondition>(raw);
       if (items.length > limit) items = items.slice(0, limit);
       if (compact) return jsonResponse(items.map(compactPrecondition));
@@ -709,13 +710,13 @@ async function handleToolCall(name: string, args: any) {
     }
     case 'create_precondition': {
       const { requirementId, category, title, description, sortOrder } = args;
-      return jsonResponse(await apiClient.createPrecondition(requirementId, { category, title, description, sortOrder }));
+      return jsonResponse(await client.createPrecondition(requirementId, { category, title, description, sortOrder }));
     }
-    case 'update_precondition': { const { id, ...data } = args; return jsonResponse(await apiClient.updatePrecondition(id, data)); }
-    case 'delete_precondition': { await apiClient.deletePrecondition(args.id); return successResponse('Precondition deleted successfully'); }
+    case 'update_precondition': { const { id, ...data } = args; return jsonResponse(await client.updatePrecondition(id, data)); }
+    case 'delete_precondition': { await client.deletePrecondition(args.id); return successResponse('Precondition deleted successfully'); }
     case 'list_verification_tests': {
       const { requirementId, compact = true, limit = 50 } = args;
-      const raw = await apiClient.listVerificationTests(requirementId);
+      const raw = await client.listVerificationTests(requirementId);
       let items = extractArray<VerificationTest>(raw);
       if (items.length > limit) items = items.slice(0, limit);
       if (compact) return jsonResponse(items.map(compactVerificationTest));
@@ -723,22 +724,22 @@ async function handleToolCall(name: string, args: any) {
     }
     case 'create_verification_test': {
       const { requirementId, testName, testType, description, steps, expectedResult, automationHint, sortOrder } = args;
-      return jsonResponse(await apiClient.createVerificationTest(requirementId, { testName, testType, description, steps, expectedResult, automationHint, sortOrder }));
+      return jsonResponse(await client.createVerificationTest(requirementId, { testName, testType, description, steps, expectedResult, automationHint, sortOrder }));
     }
-    case 'update_verification_test': { const { id, ...data } = args; return jsonResponse(await apiClient.updateVerificationTest(id, data)); }
-    case 'delete_verification_test': { await apiClient.deleteVerificationTest(args.id); return successResponse('Verification test deleted successfully'); }
+    case 'update_verification_test': { const { id, ...data } = args; return jsonResponse(await client.updateVerificationTest(id, data)); }
+    case 'delete_verification_test': { await client.deleteVerificationTest(args.id); return successResponse('Verification test deleted successfully'); }
     case 'list_requirement_links': {
       const { requirementId, limit = 50 } = args;
-      const raw = await apiClient.listRequirementLinks(requirementId);
+      const raw = await client.listRequirementLinks(requirementId);
       let items = extractArray(raw);
       if (items.length > limit) items = items.slice(0, limit);
       return jsonResponse(items);
     }
-    case 'create_requirement_link': return jsonResponse(await apiClient.createRequirementLink(args.requirementId, { targetRequirementId: args.targetRequirementId, linkType: args.linkType, description: args.description }));
-    case 'delete_requirement_link': { await apiClient.deleteRequirementLink(args.linkId); return successResponse('Requirement link deleted successfully'); }
+    case 'create_requirement_link': return jsonResponse(await client.createRequirementLink(args.requirementId, { targetRequirementId: args.targetRequirementId, linkType: args.linkType, description: args.description }));
+    case 'delete_requirement_link': { await client.deleteRequirementLink(args.linkId); return successResponse('Requirement link deleted successfully'); }
     case 'list_requirement_comments': {
       const { requirementId, compact = true, limit = 50 } = args;
-      const raw = await apiClient.listRequirementComments(requirementId);
+      const raw = await client.listRequirementComments(requirementId);
       let items = extractArray<RequirementComment>(raw);
       if (items.length > limit) items = items.slice(0, limit);
       if (compact) return jsonResponse(items.map(compactRequirementComment));
@@ -746,18 +747,18 @@ async function handleToolCall(name: string, args: any) {
     }
     case 'create_requirement_comment': {
       const { requirementId, content, parentCommentId, commentLevel, sectionKey, elementId, mentionedUsers } = args;
-      return jsonResponse(await apiClient.createRequirementComment(requirementId, { content, parentCommentId, commentLevel, sectionKey, elementId, mentionedUsers }));
+      return jsonResponse(await client.createRequirementComment(requirementId, { content, parentCommentId, commentLevel, sectionKey, elementId, mentionedUsers }));
     }
-    case 'update_requirement_comment': { const { id, ...data } = args; return jsonResponse(await apiClient.updateRequirementComment(id, data)); }
-    case 'delete_requirement_comment': { await apiClient.deleteRequirementComment(args.id); return successResponse('Comment deleted successfully'); }
-    case 'add_requirement_tags': { await apiClient.addRequirementTags(args.requirementId, args.tagIds); return successResponse('Tags added to requirement successfully'); }
-    case 'remove_requirement_tag': { await apiClient.removeRequirementTag(args.requirementId, args.tagId); return successResponse('Tag removed from requirement successfully'); }
-    case 'get_requirement_tags': return jsonResponse(await apiClient.getRequirementTags(args.requirementId));
-    case 'calculate_requirement_quality': return jsonResponse(await apiClient.calculateRequirementQuality(args.requirementId));
-    case 'get_requirement_quality': return jsonResponse(await apiClient.getRequirementQuality(args.requirementId));
+    case 'update_requirement_comment': { const { id, ...data } = args; return jsonResponse(await client.updateRequirementComment(id, data)); }
+    case 'delete_requirement_comment': { await client.deleteRequirementComment(args.id); return successResponse('Comment deleted successfully'); }
+    case 'add_requirement_tags': { await client.addRequirementTags(args.requirementId, args.tagIds); return successResponse('Tags added to requirement successfully'); }
+    case 'remove_requirement_tag': { await client.removeRequirementTag(args.requirementId, args.tagId); return successResponse('Tag removed from requirement successfully'); }
+    case 'get_requirement_tags': return jsonResponse(await client.getRequirementTags(args.requirementId));
+    case 'calculate_requirement_quality': return jsonResponse(await client.calculateRequirementQuality(args.requirementId));
+    case 'get_requirement_quality': return jsonResponse(await client.getRequirementQuality(args.requirementId));
     case 'get_requirement_activity': {
       const { requirementId, limit = 50 } = args;
-      const raw = await apiClient.getRequirementActivity(requirementId);
+      const raw = await client.getRequirementActivity(requirementId);
       let items = extractArray(raw);
       if (items.length > limit) items = items.slice(0, limit);
       return jsonResponse(items);
@@ -770,22 +771,22 @@ async function handleToolCall(name: string, args: any) {
 // ============================================================
 // Resource read handler — shared logic
 // ============================================================
-async function handleResourceRead(uri: string) {
+async function handleResourceRead(uri: string, client: ThinkPromptApiClient) {
   if (uri.startsWith('style-guide://')) {
     const styleGuideId = uri.replace('style-guide://', '');
-    const styleGuide = await apiClient.getStyleGuide(styleGuideId);
+    const styleGuide = await client.getStyleGuide(styleGuideId);
     const content = `# ${styleGuide.title}\n\n${styleGuide.description ?? ''}\n\n## Content\n${styleGuide.content}\n\n## Variables\n${styleGuide.variables.length > 0 ? styleGuide.variables.map((v) => `- **${v.name}** (${v.type}): ${v.description ?? 'No description'}`).join('\n') : 'No variables required'}\n\n## Statistics\n- Usage count: ${styleGuide.usageCount}\n- Created: ${styleGuide.createdAt}\n- Updated: ${styleGuide.updatedAt}\n`;
     return { contents: [{ uri, mimeType: 'text/plain', text: content }] };
   }
   if (uri.startsWith('template://')) {
     const templateId = uri.replace('template://', '');
-    const template = await apiClient.getTemplate(templateId);
+    const template = await client.getTemplate(templateId);
     const content = `# ${template.title}\n**Type:** ${template.type === 'example' ? 'Example Prompt' : 'Style Guide'}\n${template.category ? `**Category:** ${template.category}` : ''}\n${template.language ? `**Language:** ${template.language}` : ''}\n\n${template.description ?? ''}\n\n## Content\n${template.content}\n\n${template.useCaseHints && template.useCaseHints.length > 0 ? `## When to Use This Template\n${template.useCaseHints.map((hint) => `- ${hint}`).join('\n')}` : ''}\n\n${template.tags && template.tags.length > 0 ? `## Tags\n${template.tags.map((tag) => `- ${tag.name}`).join('\n')}` : ''}\n\n## Statistics\n- Usage count: ${template.usageCount}\n- Created: ${template.createdAt}\n- Updated: ${template.updatedAt}\n`;
     return { contents: [{ uri, mimeType: 'text/plain', text: content }] };
   }
   if (uri.startsWith('workflow://')) {
     const workflowId = uri.replace('workflow://', '');
-    const workflow = await apiClient.getWorkflow(workflowId);
+    const workflow = await client.getWorkflow(workflowId);
     const resourceList = workflow.resources.length > 0
       ? workflow.resources.map((r) => `- [${r.resourceType.toUpperCase()}] ${r.alias ?? r.resourceId}`).join('\n')
       : 'No resources attached';
@@ -801,7 +802,7 @@ async function handleResourceRead(uri: string) {
 // ============================================================
 // Server factory — creates a new Server with all handlers
 // ============================================================
-function createServer(): Server {
+function createServer(client: ThinkPromptApiClient): Server {
   const server = new Server(
     { name: '@honeyfield/thinkprompt-mcp', version: '1.7.0' },
     { capabilities: { tools: {}, resources: {} } },
@@ -812,7 +813,7 @@ function createServer(): Server {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
-      return await handleToolCall(name, args);
+      return await handleToolCall(name, args, client);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
@@ -822,9 +823,9 @@ function createServer(): Server {
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     try {
       const [styleGuidesResult, templatesResult, workflowsResult] = await Promise.all([
-        apiClient.listStyleGuides({ limit: 100 }),
-        apiClient.listTemplates({ limit: 100 }),
-        apiClient.listWorkflows({ limit: 100 }),
+        client.listStyleGuides({ limit: 100 }),
+        client.listTemplates({ limit: 100 }),
+        client.listWorkflows({ limit: 100 }),
       ]);
       const styleGuideResources = styleGuidesResult.data.map((sg) => ({ uri: `style-guide://${sg.id}`, name: sg.title, description: sg.description ?? undefined, mimeType: 'text/plain' }));
       const templateResources = templatesResult.data.map((t) => ({ uri: `template://${t.id}`, name: `[${t.type}] ${t.title}`, description: t.description ?? `${t.type} template${t.category ? ` for ${t.category}` : ''}`, mimeType: 'text/plain' }));
@@ -834,7 +835,7 @@ function createServer(): Server {
   });
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-    return handleResourceRead(request.params.uri);
+    return handleResourceRead(request.params.uri, client);
   });
 
   return server;
@@ -876,7 +877,8 @@ async function main() {
       console.error('Error: THINKPROMPT_API_KEY environment variable is required');
       process.exit(1);
     }
-    const server = createServer();
+    apiClient = new ThinkPromptApiClient(API_URL, API_KEY);
+    const server = createServer(apiClient);
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('ThinkPrompt MCP Server running on stdio');
@@ -884,9 +886,7 @@ async function main() {
   }
 
   // HTTP mode (Streamable HTTP for remote deployment)
-  if (!API_KEY) {
-    console.error('Warning: THINKPROMPT_API_KEY not set — API calls will fail');
-  }
+  // In HTTP mode, users provide their API key per-session via X-ThinkPrompt-Key header
 
   const app = express();
   app.use(express.json());
@@ -898,6 +898,7 @@ async function main() {
 
   // Session management
   const transports: Map<string, StreamableHTTPServerTransport> = new Map();
+  const sessionClients: Map<string, ThinkPromptApiClient> = new Map();
 
   // POST /mcp — main MCP endpoint
   app.post('/mcp', apiKeyAuth, async (req: Request, res: Response) => {
@@ -910,17 +911,26 @@ async function main() {
     }
 
     if (!sessionId && isInitializeRequest(req.body)) {
+      // Extract user's ThinkPrompt API key from headers
+      const userApiKey = (req.headers['x-thinkprompt-key'] as string) || API_KEY;
+      if (!userApiKey) {
+        res.status(401).json({ error: 'Missing ThinkPrompt API key. Provide via X-ThinkPrompt-Key header.' });
+        return;
+      }
+      const userClient = new ThinkPromptApiClient(API_URL, userApiKey);
+
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
       });
 
-      const server = createServer();
+      const server = createServer(userClient);
 
       transport.onclose = () => {
         // Find and remove session from map
         for (const [sid, t] of transports.entries()) {
           if (t === transport) {
             transports.delete(sid);
+            sessionClients.delete(sid);
             break;
           }
         }
@@ -936,6 +946,7 @@ async function main() {
       const newSessionId = res.getHeader('mcp-session-id') as string | undefined;
       if (newSessionId) {
         transports.set(newSessionId, transport);
+        sessionClients.set(newSessionId, userClient);
       }
       return;
     }
@@ -965,6 +976,7 @@ async function main() {
       const transport = transports.get(sessionId)!;
       await transport.close();
       transports.delete(sessionId);
+      sessionClients.delete(sessionId);
     }
     res.status(200).json({ success: true });
   });
