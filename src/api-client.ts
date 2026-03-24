@@ -1579,4 +1579,84 @@ export class ThinkPromptApiClient {
   async getRequirementActivity(requirementId: string): Promise<unknown[]> {
     return this.request<unknown[]>(`/requirements/${requirementId}/activity`);
   }
+
+  // ============ Discovery Methods ============
+
+  async listDiscoveryItems(projectId: string): Promise<DiscoveryItem[]> {
+    return this.request<DiscoveryItem[]>(`/projects/${projectId}/discovery`);
+  }
+
+  async getDiscoveryReadiness(projectId: string): Promise<DiscoveryReadiness> {
+    return this.request<DiscoveryReadiness>(`/projects/${projectId}/discovery/readiness`);
+  }
+
+  async listDiscoveryItemsByCategory(projectId: string, categoryId: string): Promise<DiscoveryItem[]> {
+    return this.request<DiscoveryItem[]>(`/projects/${projectId}/discovery/category/${categoryId}`);
+  }
+
+  async createDiscoveryItem(projectId: string, data: CreateDiscoveryItemInput): Promise<DiscoveryItem> {
+    return this.request<DiscoveryItem>(`/projects/${projectId}/discovery`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDiscoveryItem(projectId: string, itemId: string, data: UpdateDiscoveryItemInput): Promise<DiscoveryItem> {
+    return this.request<DiscoveryItem>(`/projects/${projectId}/discovery/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async cycleDiscoveryStatus(projectId: string, itemId: string): Promise<DiscoveryItem> {
+    return this.request<DiscoveryItem>(`/projects/${projectId}/discovery/${itemId}/cycle-status`, {
+      method: 'PATCH',
+    });
+  }
+
+  async deleteDiscoveryItem(projectId: string, itemId: string): Promise<void> {
+    await this.request<void>(`/projects/${projectId}/discovery/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+}
+
+// ============ Discovery Types ============
+
+export interface DiscoveryItem {
+  id: string;
+  projectId: string;
+  text: string;
+  status: 'open' | 'unclear' | 'confirmed';
+  priority: 'must' | 'nice' | 'future';
+  categoryId: string;
+  note: string | null;
+  sortOrder: number;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiscoveryReadiness {
+  total: number;
+  confirmed: number;
+  open: number;
+  unclear: number;
+  score: number;
+  level: 'critical' | 'in_progress' | 'ready';
+}
+
+export interface CreateDiscoveryItemInput {
+  text: string;
+  priority: 'must' | 'nice' | 'future';
+  categoryId: string;
+  note?: string;
+}
+
+export interface UpdateDiscoveryItemInput {
+  text?: string;
+  status?: 'open' | 'unclear' | 'confirmed';
+  priority?: 'must' | 'nice' | 'future';
+  note?: string;
+  sortOrder?: number;
 }

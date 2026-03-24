@@ -25,6 +25,8 @@ import type {
   VerificationTest,
   Precondition,
   RequirementComment,
+  DiscoveryItem,
+  DiscoveryReadiness,
 } from './api-client.js';
 
 // Response helpers to reduce boilerplate
@@ -561,6 +563,79 @@ const TOOL_DEFINITIONS = [
     { name: 'get_requirement_quality', description: 'Get the cached quality score for a requirement.', inputSchema: { type: 'object', properties: { requirementId: { type: 'string' } }, required: ['requirementId'] } },
     // Requirement Activity Tools
     { name: 'get_requirement_activity', description: 'Get the activity log for a requirement.', inputSchema: { type: 'object', properties: { requirementId: { type: 'string' }, limit: { type: 'number' } }, required: ['requirementId'] } },
+
+    // Discovery Tools
+    {
+      name: 'list_discovery_items',
+      description: 'List all discovery items for a project. Discovery is Phase 0 requirements gathering with 7 categories (vision, users, features, integrations, technical, design, nonfunc).',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'string', description: 'The UUID of the project' },
+          categoryId: { type: 'string', enum: ['vision', 'users', 'features', 'integrations', 'technical', 'design', 'nonfunc'], description: 'Optional: filter by category' },
+        },
+        required: ['projectId'],
+      },
+    },
+    {
+      name: 'get_discovery_readiness',
+      description: 'Get the discovery readiness score for a project. Returns total/confirmed/open/unclear counts, score (0-100), and level (critical/in_progress/ready).',
+      inputSchema: { type: 'object', properties: { projectId: { type: 'string', description: 'The UUID of the project' } }, required: ['projectId'] },
+    },
+    {
+      name: 'create_discovery_item',
+      description: 'Create a new discovery item in a project category.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'string', description: 'The UUID of the project' },
+          text: { type: 'string', description: 'Requirement description text' },
+          priority: { type: 'string', enum: ['must', 'nice', 'future'], description: 'Priority level' },
+          categoryId: { type: 'string', enum: ['vision', 'users', 'features', 'integrations', 'technical', 'design', 'nonfunc'], description: 'Category' },
+          note: { type: 'string', description: 'Optional internal note' },
+        },
+        required: ['projectId', 'text', 'priority', 'categoryId'],
+      },
+    },
+    {
+      name: 'update_discovery_item',
+      description: 'Update an existing discovery item.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'string' },
+          itemId: { type: 'string', description: 'The UUID of the discovery item' },
+          text: { type: 'string' }, status: { type: 'string', enum: ['open', 'unclear', 'confirmed'] },
+          priority: { type: 'string', enum: ['must', 'nice', 'future'] },
+          note: { type: 'string' }, sortOrder: { type: 'number' },
+        },
+        required: ['projectId', 'itemId'],
+      },
+    },
+    {
+      name: 'cycle_discovery_status',
+      description: 'Cycle the status of a discovery item: open -> unclear -> confirmed -> open.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'string' },
+          itemId: { type: 'string', description: 'The UUID of the discovery item' },
+        },
+        required: ['projectId', 'itemId'],
+      },
+    },
+    {
+      name: 'delete_discovery_item',
+      description: 'Delete a discovery item.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'string' },
+          itemId: { type: 'string', description: 'The UUID of the discovery item' },
+        },
+        required: ['projectId', 'itemId'],
+      },
+    },
 ] as const;
 
 // ============================================================
@@ -763,6 +838,24 @@ async function handleToolCall(name: string, args: any, client: ThinkPromptApiCli
       if (items.length > limit) items = items.slice(0, limit);
       return jsonResponse(items);
     }
+
+    case 'list_discovery_items': {
+      const items = args.categoryId
+        ? await client.listDiscoveryItemsByCategory(args.projectId, args.categoryId)
+        : await client.listDiscoveryItems(args.projectId);
+      return jsonResponse(items);
+    }
+    case 'get_discovery_readiness': return jsonResponse(await client.getDiscoveryReadiness(args.projectId));
+    case 'create_discovery_item': {
+      const { projectId, text, priority, categoryId, note } = args;
+      return jsonResponse(await client.createDiscoveryItem(projectId, { text, priority, categoryId, note }));
+    }
+    case 'update_discovery_item': {
+      const { projectId, itemId, text, status, priority, note, sortOrder } = args;
+      return jsonResponse(await client.updateDiscoveryItem(projectId, itemId, { text, status, priority, note, sortOrder }));
+    }
+    case 'cycle_discovery_status': return jsonResponse(await client.cycleDiscoveryStatus(args.projectId, args.itemId));
+    case 'delete_discovery_item': { await client.deleteDiscoveryItem(args.projectId, args.itemId); return successResponse('Discovery item deleted'); }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
