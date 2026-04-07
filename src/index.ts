@@ -27,6 +27,9 @@ import type {
   RequirementComment,
   DiscoveryItem,
   DiscoveryReadiness,
+  McpServerEntry,
+  CreateMcpServerInput,
+  UpdateMcpServerInput,
 } from './api-client.js';
 
 // Response helpers to reduce boilerplate
@@ -636,6 +639,91 @@ const TOOL_DEFINITIONS = [
         required: ['projectId', 'itemId'],
       },
     },
+
+    // ============ MCP Servers ============
+    {
+      name: "list_mcp_servers",
+      description: "List all registered MCP servers in the workspace. Can filter by category, status, or search term.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          search: { type: "string", description: "Search by name or description" },
+          category: { type: "string", enum: ["general", "code", "data", "devops", "communication", "productivity", "custom"] },
+          status: { type: "string", enum: ["active", "inactive", "deprecated"] },
+          connectionType: { type: "string", enum: ["http", "stdio"] },
+          limit: { type: "number", description: "Max results (default 50)" },
+        },
+      },
+    },
+    {
+      name: "get_mcp_server",
+      description: "Get detailed information about a specific MCP server including connection config, tools, and config snippet.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "The UUID of the MCP server" },
+        },
+        required: ["id"],
+      },
+    },
+    {
+      name: "create_mcp_server",
+      description: "Register a new MCP server in the workspace.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Server name" },
+          description: { type: "string", description: "What this MCP server does" },
+          connectionType: { type: "string", enum: ["http", "stdio"], description: "Connection type" },
+          url: { type: "string", description: "Server URL (for HTTP connections)" },
+          command: { type: "string", description: "Command to run (for stdio connections)" },
+          args: { type: "array", items: { type: "string" }, description: "Command arguments" },
+          env: { type: "object", description: "Environment variables as key-value pairs" },
+          category: { type: "string", enum: ["general", "code", "data", "devops", "communication", "productivity", "custom"] },
+          status: { type: "string", enum: ["active", "inactive", "deprecated"] },
+          tools: { type: "array", items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" } }, required: ["name"] }, description: "Tools provided by this server" },
+          tags: { type: "array", items: { type: "string" }, description: "Tags for categorization" },
+          version: { type: "string", description: "Server version" },
+          documentationUrl: { type: "string", description: "Documentation URL" },
+        },
+        required: ["name", "connectionType"],
+      },
+    },
+    {
+      name: "update_mcp_server",
+      description: "Update an existing MCP server entry.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "The UUID of the MCP server to update" },
+          name: { type: "string" },
+          description: { type: "string" },
+          connectionType: { type: "string", enum: ["http", "stdio"] },
+          url: { type: "string" },
+          command: { type: "string" },
+          args: { type: "array", items: { type: "string" } },
+          env: { type: "object" },
+          category: { type: "string", enum: ["general", "code", "data", "devops", "communication", "productivity", "custom"] },
+          status: { type: "string", enum: ["active", "inactive", "deprecated"] },
+          tools: { type: "array", items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" } }, required: ["name"] } },
+          tags: { type: "array", items: { type: "string" } },
+          version: { type: "string" },
+          documentationUrl: { type: "string" },
+        },
+        required: ["id"],
+      },
+    },
+    {
+      name: "delete_mcp_server",
+      description: "Delete (archive) an MCP server entry.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "The UUID of the MCP server to delete" },
+        },
+        required: ["id"],
+      },
+    },
 ] as const;
 
 // ============================================================
@@ -856,6 +944,30 @@ async function handleToolCall(name: string, args: any, client: ThinkPromptApiCli
     }
     case 'cycle_discovery_status': return jsonResponse(await client.cycleDiscoveryStatus(args.projectId, args.itemId));
     case 'delete_discovery_item': { await client.deleteDiscoveryItem(args.projectId, args.itemId); return successResponse('Discovery item deleted'); }
+
+    // ============ MCP Servers ============
+    case "list_mcp_servers": {
+      const query: Record<string, string | number> = {};
+      if (args.search) query.search = args.search;
+      if (args.category) query.category = args.category;
+      if (args.status) query.status = args.status;
+      if (args.connectionType) query.connectionType = args.connectionType;
+      if (args.limit) query.limit = args.limit;
+      return jsonResponse(await client.listMcpServers(query as any));
+    }
+    case "get_mcp_server": return jsonResponse(await client.getMcpServer(args.id));
+    case "create_mcp_server": {
+      const { ...createData } = args;
+      return jsonResponse(await client.createMcpServer(createData as CreateMcpServerInput));
+    }
+    case "update_mcp_server": {
+      const { id: serverId, ...updateData } = args;
+      return jsonResponse(await client.updateMcpServer(serverId, updateData as UpdateMcpServerInput));
+    }
+    case "delete_mcp_server": {
+      await client.deleteMcpServer(args.id);
+      return successResponse("MCP server deleted successfully");
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

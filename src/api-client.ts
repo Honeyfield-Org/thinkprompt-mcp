@@ -1619,6 +1619,45 @@ export class ThinkPromptApiClient {
       method: 'DELETE',
     });
   }
+
+  // ============ MCP Server Methods ============
+
+  async listMcpServers(query?: McpServerListQuery): Promise<McpServerEntry[]> {
+    const params = new URLSearchParams();
+    if (query?.page) params.set("page", String(query.page));
+    if (query?.limit) params.set("limit", String(query.limit));
+    if (query?.search) params.set("search", query.search);
+    if (query?.category) params.set("category", query.category);
+    if (query?.status) params.set("status", query.status);
+    if (query?.connectionType) params.set("connectionType", query.connectionType);
+    const qs = params.toString();
+    const result = await this.request<{ data: McpServerEntry[] }>(`/mcp-servers${qs ? `?${qs}` : ""}`);
+    return result.data ?? (result as unknown as McpServerEntry[]);
+  }
+
+  async getMcpServer(id: string): Promise<McpServerEntry> {
+    return this.request<McpServerEntry>(`/mcp-servers/${id}`);
+  }
+
+  async createMcpServer(data: CreateMcpServerInput): Promise<McpServerEntry> {
+    return this.request<McpServerEntry>("/mcp-servers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMcpServer(id: string, data: UpdateMcpServerInput): Promise<McpServerEntry> {
+    return this.request<McpServerEntry>(`/mcp-servers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMcpServer(id: string): Promise<void> {
+    await this.request<void>(`/mcp-servers/${id}`, {
+      method: "DELETE",
+    });
+  }
 }
 
 // ============ Discovery Types ============
@@ -1659,4 +1698,55 @@ export interface UpdateDiscoveryItemInput {
   priority?: 'must' | 'nice' | 'future';
   note?: string;
   sortOrder?: number;
+}
+
+// ============ MCP Server Types ============
+
+export interface McpServerEntry {
+  id: string;
+  name: string;
+  description?: string;
+  connectionType: 'http' | 'stdio';
+  url?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  category: string;
+  status: string;
+  tools?: { name: string; description?: string }[];
+  configSnippet?: Record<string, unknown>;
+  tags?: string[];
+  version?: string;
+  documentationUrl?: string;
+  isArchived: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMcpServerInput {
+  name: string;
+  description?: string;
+  connectionType: 'http' | 'stdio';
+  url?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  category?: string;
+  status?: string;
+  tools?: { name: string; description?: string }[];
+  tags?: string[];
+  version?: string;
+  documentationUrl?: string;
+}
+
+export interface UpdateMcpServerInput extends Partial<CreateMcpServerInput> {}
+
+export interface McpServerListQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  status?: string;
+  connectionType?: string;
 }
